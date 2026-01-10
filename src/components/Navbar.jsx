@@ -28,7 +28,7 @@ export default function Navbar() {
   return (
     <>
       {/* NAVBAR */}
-      <header className="fixed top-0 left-0 w-full flex justify-center mt-4 px-4 z-[2]">
+      <header className="fixed top-0 left-0 w-full flex justify-center mt-4 px-4 z-[29999]">
         <nav className="w-full max-w-[1200px] bg-white rounded-[40px] shadow-xl px-8 py-6 flex items-center justify-between">
 
           <NavLink to="/" className="flex items-center">
@@ -102,7 +102,7 @@ export default function Navbar() {
 
       {/* MOBILE MENU */}
       <div
-        className={`fixed inset-0 z-[2] transition-transform duration-300 ${
+        className={`fixed inset-0 z-[299999] transition-transform duration-300 ${
           menuOpen ? "translate-x-0" : "-translate-x-full"
         } bg-[#9000ff]`}
       >
