@@ -32,40 +32,10 @@ function VRHeadset({ progress, initialScale }) {
 export default function Home_Hero() {
   const sectionRef = useRef(null);
   const [progress, setProgress] = useState(0);
-
-  /* ---------- Scroll + Touch Handling ---------- */
-  useEffect(() => {
-    let touchStartY = 0;
-
-    const handleWheel = (e) => {
-      e.preventDefault();
-      setProgress((prev) => Math.min(Math.max(prev + e.deltaY * 0.001, 0), 1));
-    };
-
-    const handleTouchStart = (e) => {
-      touchStartY = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e) => {
-      const touchY = e.touches[0].clientY;
-      const delta = touchStartY - touchY;
-      setProgress((prev) => Math.min(Math.max(prev + delta * 0.002, 0), 1));
-      touchStartY = touchY;
-    };
-
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-
-    return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-    };
-  }, []);
+  const [scrollLocked, setScrollLocked] = useState(true); // Lock scroll until animation finishes
+  const [initialScale, setInitialScale] = useState(5);
 
   /* ---------- Responsive initial scale ---------- */
-  const [initialScale, setInitialScale] = useState(5);
   useEffect(() => {
     const updateScale = () => {
       if (window.innerWidth < 768) setInitialScale(3); // mobile
@@ -76,16 +46,68 @@ export default function Home_Hero() {
     return () => window.removeEventListener("resize", updateScale);
   }, []);
 
+  /* ---------- Scroll + Touch Handling ---------- */
+  useEffect(() => {
+    let touchStartY = 0;
+
+    const handleWheel = (e) => {
+      if (!scrollLocked) return; // Only animate when locked
+      e.preventDefault();
+      setProgress((prev) => {
+        const next = Math.min(Math.max(prev + e.deltaY * 0.002, 0), 1);
+        if (next >= 1) {
+          setScrollLocked(false);
+          document.body.style.overflow = "auto"; // Unlock normal scroll
+        }
+        return next;
+      });
+    };
+
+    const handleTouchStart = (e) => {
+      if (!scrollLocked) return;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e) => {
+      if (!scrollLocked) return;
+      const touchY = e.touches[0].clientY;
+      const delta = touchStartY - touchY;
+      setProgress((prev) => {
+        const next = Math.min(Math.max(prev + delta * 0.004, 0), 1);
+        if (next >= 1) {
+          setScrollLocked(false);
+          document.body.style.overflow = "auto"; // Unlock normal scroll
+        }
+        return next;
+      });
+      touchStartY = touchY;
+    };
+
+    // Lock body scroll
+    if (scrollLocked) document.body.style.overflow = "hidden";
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("touchstart", handleTouchStart, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      document.body.style.overflow = "auto"; // Reset scroll on unmount
+    };
+  }, [scrollLocked]);
+
   /* ---------- Animate top: start 40px → scroll 0px ---------- */
   const modelTop = 40 * (1 - Math.min(progress * 5, 1));
 
   return (
     <section
       ref={sectionRef}
-      className="relative w-full h-screen overflow-hidden"
+      className="relative w-full h-screen overflow-hidden mb-0"
     >
       {/* ================= VIDEO ================= */}
-      {progress > 0.95 && (
+      {progress >= 1 && (
         <video
           autoPlay
           loop
@@ -101,7 +123,7 @@ export default function Home_Hero() {
         className="absolute inset-0 transition-opacity duration-500"
         style={{
           background: "linear-gradient(to top right, #9000FF, white, white)",
-          opacity: progress > 0.95 ? 0 : 1,
+          opacity: progress >= 1 ? 0 : 1,
           zIndex: 0,
         }}
       />
@@ -112,7 +134,7 @@ export default function Home_Hero() {
         style={{
           transform: `translateY(${modelTop}px)`,
           zIndex: progress < 0.2 ? 0 : 10,
-          opacity: progress > 0.95 ? 0 : 1,
+          opacity: progress >= 1 ? 0 : 1,
         }}
       >
         <Canvas camera={{ position: [0, 0, 6], fov: 50 }} className="w-full h-full">
@@ -132,7 +154,7 @@ export default function Home_Hero() {
         <div className="max-w-[1200px] w-full flex flex-col items-center">
           <h1
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-center transition-colors duration-700"
-            style={{ color: progress > 0.95 ? "#ffffff" : "#51007d" }}
+            style={{ color: progress >= 1 ? "#ffffff" : "#51007d" }}
           >
             VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
             simulation & copilot solutions for learning and business growth
