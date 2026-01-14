@@ -4,11 +4,7 @@ import { useGLTF } from "@react-three/drei";
 import heroVideo from "../assets/video.webm";
 
 /* ---------- 3D MODEL ---------- */
-const VRHeadset = memo(function VRHeadset({
-  progressRef,
-  initialScale,
-  active,
-}) {
+const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active }) {
   const ref = useRef();
   const { scene } = useGLTF("/vr-wings/vr-headset.glb");
 
@@ -17,19 +13,18 @@ const VRHeadset = memo(function VRHeadset({
 
     const p = progressRef.current;
 
-    // Smooth rotation
-    ref.current.rotation.x +=
-      (p * Math.PI * 0.8 - ref.current.rotation.x) * 0.1;
-    ref.current.rotation.y +=
-      (p * Math.PI * 2 - ref.current.rotation.y) * 0.1;
+    // Rotation
+    ref.current.rotation.x += (p * Math.PI * 0.8 - ref.current.rotation.x) * 0.1;
+    ref.current.rotation.y += (p * Math.PI * 2.2 - ref.current.rotation.y) * 0.1;
 
-    // Smooth scale
-    const targetScale = initialScale + p * (12 - initialScale);
-    ref.current.scale.x += (targetScale - ref.current.scale.x) * 0.1;
-    ref.current.scale.y += (targetScale - ref.current.scale.y) * 0.1;
-    ref.current.scale.z += (targetScale - ref.current.scale.z) * 0.1;
+    // Scale
+    const maxScale = 18;
+    const targetScale = initialScale + p * (maxScale - initialScale);
+    ref.current.scale.x += (targetScale - ref.current.scale.x) * 0.15;
+    ref.current.scale.y += (targetScale - ref.current.scale.y) * 0.15;
+    ref.current.scale.z += (targetScale - ref.current.scale.z) * 0.15;
 
-    ref.current.position.y = -0.4;
+    ref.current.position.y = 0.02;
   });
 
   return <primitive ref={ref} object={scene.clone()} />;
@@ -39,73 +34,206 @@ const VRHeadset = memo(function VRHeadset({
 export default function Home_Hero() {
   const sectionRef = useRef(null);
   const progressRef = useRef(0);
+  const isReversingRef = useRef(false);
+  const lastScrollYRef = useRef(0);
+  const touchStartRef = useRef({ y: 0, time: 0 });
+  const reverseTriggeredRef = useRef(false);
 
   const [progress, setProgress] = useState(0);
   const [scrollLocked, setScrollLocked] = useState(true);
   const [initialScale, setInitialScale] = useState(5);
+  const [showModel, setShowModel] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  /* ---------- Check if mobile ---------- */
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   /* ---------- Responsive scale ---------- */
   useEffect(() => {
-    const updateScale = () => {
-      setInitialScale(window.innerWidth < 768 ? 3 : 5);
-    };
+    const updateScale = () => setInitialScale(window.innerWidth < 768 ? 3 : 5);
     updateScale();
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
   }, []);
 
-  /* ---------- Scroll handling (optimized) ---------- */
+  /* ---------- Show model when progress resets ---------- */
   useEffect(() => {
-    let touchStartY = 0;
+    if (progress === 0) {
+      setShowModel(true);
+      reverseTriggeredRef.current = false;
+    }
+  }, [progress]);
+
+  /* ---------- Scroll & Touch Animation Handling ---------- */
+  useEffect(() => {
     let ticking = false;
+    let touchAnimationFrame;
 
     const updateProgress = (delta) => {
-      const next = Math.min(Math.max(progressRef.current + delta, 0), 1);
+      if (isReversingRef.current) return;
+
+      let next = Math.min(Math.max(progressRef.current + delta, 0), 1);
       progressRef.current = next;
       setProgress(next);
 
-      if (next >= 1) {
+      if (next > 0 && next < 1) {
+        setScrollLocked(true);
+        document.body.style.overflow = "hidden";
+      } else if (next >= 1) {
         setScrollLocked(false);
         document.body.style.overflow = "auto";
+        setShowModel(false);
+      } else if (next <= 0) {
+        setScrollLocked(false);
+        document.body.style.overflow = "auto";
+        setShowModel(true);
       }
     };
 
+    /* ---------- PC Wheel ---------- */
     const handleWheel = (e) => {
-      if (!scrollLocked) return;
-      e.preventDefault();
+      if (scrollLocked || progressRef.current < 1) e.preventDefault();
+      if (!scrollLocked && progressRef.current >= 1) return;
       if (ticking) return;
 
       ticking = true;
       requestAnimationFrame(() => {
-        updateProgress(e.deltaY * 0.0015);
+        updateProgress(e.deltaY * 0.0016);
         ticking = false;
       });
     };
 
+    /* ---------- Mobile Touch ---------- */
     const handleTouchStart = (e) => {
-      touchStartY = e.touches[0].clientY;
+      touchStartRef.current = {
+        y: e.touches[0].clientY,
+        time: Date.now()
+      };
     };
 
     const handleTouchMove = (e) => {
-      if (!scrollLocked) return;
-      const delta = touchStartY - e.touches[0].clientY;
-      updateProgress(delta * 0.003);
-      touchStartY = e.touches[0].clientY;
+      if (scrollLocked || progressRef.current < 1) e.preventDefault();
+      if (!scrollLocked && progressRef.current >= 1) return;
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = touchStartRef.current.y - currentY;
+
+      const multiplier = 0.01; // Increased for smooth mobile animation
+
+      // Cancel previous frame
+      if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
+
+      touchAnimationFrame = requestAnimationFrame(() => {
+        updateProgress(deltaY * multiplier);
+      });
+
+      touchStartRef.current.y = currentY;
     };
 
-    if (scrollLocked) document.body.style.overflow = "hidden";
-
     window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
+      if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
       document.body.style.overflow = "auto";
     };
   }, [scrollLocked]);
+
+  /* ---------- Reverse Animation on Scroll Up ---------- */
+  useEffect(() => {
+    let scrollTimeout;
+    const checkForReverse = () => {
+      const currentScrollY = window.scrollY;
+      const sectionTop = sectionRef.current?.offsetTop || 0;
+      const isAtTop = currentScrollY <= sectionTop + 10;
+
+      if (
+        !isReversingRef.current &&
+        !reverseTriggeredRef.current &&
+        scrollLocked === false &&
+        progress === 1 &&
+        isAtTop &&
+        currentScrollY < lastScrollYRef.current
+      ) {
+        startReverseAnimation();
+      }
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    const startReverseAnimation = () => {
+      reverseTriggeredRef.current = true;
+      isReversingRef.current = true;
+      setScrollLocked(true);
+      document.body.style.overflow = "hidden";
+      setShowModel(true);
+
+      const reverse = () => {
+        progressRef.current -= 0.02;
+        if (progressRef.current <= 0) {
+          progressRef.current = 0;
+          setProgress(0);
+          setScrollLocked(false);
+          isReversingRef.current = false;
+          document.body.style.overflow = "auto";
+        } else {
+          setProgress(progressRef.current);
+          requestAnimationFrame(reverse);
+        }
+      };
+
+      setTimeout(() => requestAnimationFrame(reverse), 50);
+    };
+
+    const handleScroll = () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(checkForReverse, 50);
+    };
+    const handleTouchEnd = () => setTimeout(checkForReverse, 100);
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("touchend", handleTouchEnd);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [scrollLocked, progress]);
+
+  /* ---------- Reset on scroll down ---------- */
+  useEffect(() => {
+    const handleScrollDown = (e) => {
+      const sectionTop = sectionRef.current?.offsetTop || 0;
+      const isScrollingDown =
+        (e.deltaY && e.deltaY > 0) ||
+        (e.touches && touchStartRef.current.y - e.touches[0]?.clientY < 0);
+
+      if (isScrollingDown && window.scrollY <= sectionTop + 10) {
+        if (progress === 0 && showModel) {
+          progressRef.current = 0.01;
+          setProgress(0.01);
+          setScrollLocked(true);
+        }
+      }
+    };
+
+    window.addEventListener("wheel", handleScrollDown);
+    window.addEventListener("touchmove", handleScrollDown);
+
+    return () => {
+      window.removeEventListener("wheel", handleScrollDown);
+      window.removeEventListener("touchmove", handleScrollDown);
+    };
+  }, [progress, showModel]);
 
   /* ---------- Model vertical animation ---------- */
   const modelTop = 40 * (1 - Math.min(progress * 5, 1));
@@ -113,7 +241,8 @@ export default function Home_Hero() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full h-screen overflow-hidden mb-0"
+      className="relative w-full h-screen overflow-hidden"
+      style={{ touchAction: scrollLocked ? "none" : "auto" }}
     >
       {/* ================= VIDEO ================= */}
       {progress >= 1 && (
@@ -138,8 +267,8 @@ export default function Home_Hero() {
         }}
       />
 
-      {/* ================= 3D MODEL (DESTROY AFTER DONE) ================= */}
-      {progress < 1 && (
+      {/* ================= 3D MODEL ================= */}
+      {showModel && progress < 1 && (
         <div
           className="fixed left-0 w-full h-screen pointer-events-none"
           style={{
@@ -158,7 +287,7 @@ export default function Home_Hero() {
               <VRHeadset
                 progressRef={progressRef}
                 initialScale={initialScale}
-                active={progress < 1}
+                active={showModel && progress < 1}
               />
             </Suspense>
           </Canvas>
@@ -167,25 +296,20 @@ export default function Home_Hero() {
 
       {/* ================= CONTENT ================= */}
       <div
-        className="absolute inset-0 flex flex-col items-center justify-start text-center px-6 pt-[20vh] sm:pt-[22vh] md:pt-[25vh] lg:pt-[30vh]"
+        className="absolute inset-0 flex flex-col items-center text-center px-6 pt-[25vh]"
         style={{ zIndex: 5 }}
       >
-        <div className="max-w-[1200px] w-full flex flex-col items-center">
-          <h1
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 transition-colors duration-700"
-            style={{ color: progress >= 1 ? "#ffffff" : "#51007d" }}
-          >
-            VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
-            simulation & copilot solutions for learning and business growth
-          </h1>
+        <h1
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 transition-colors duration-700"
+          style={{ color: progress >= 1 ? "#ffffff" : "#51007d" }}
+        >
+          VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
+          simulation & copilot solutions for learning and business growth
+        </h1>
 
-          <button className="px-6 sm:px-8 py-2 sm:py-3 bg-[#9000ff] text-white font-semibold rounded-[30px] shadow-lg hover:bg-purple-700 hover:shadow-xl transition-all duration-300 flex items-center gap-2 group">
-            Osso Nurse Training
-            <span className="transform translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
-              {">"}
-            </span>
-          </button>
-        </div>
+        <button className="px-8 py-3 bg-[#9000ff] text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300">
+          Osso Nurse Training →
+        </button>
       </div>
     </section>
   );
