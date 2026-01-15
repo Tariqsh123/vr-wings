@@ -18,13 +18,14 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active })
     ref.current.rotation.y += (p * Math.PI * 2.2 - ref.current.rotation.y) * 0.1;
 
     // Scale
-    const maxScale = 18;
+    const maxScale = 45;
     const targetScale = initialScale + p * (maxScale - initialScale);
     ref.current.scale.x += (targetScale - ref.current.scale.x) * 0.15;
     ref.current.scale.y += (targetScale - ref.current.scale.y) * 0.15;
     ref.current.scale.z += (targetScale - ref.current.scale.z) * 0.15;
 
-    ref.current.position.y = 0.02;
+    ref.current.position.y = -1;
+    ref.current.position.x = -0.2;
   });
 
   return <primitive ref={ref} object={scene.clone()} />;
@@ -268,48 +269,56 @@ export default function Home_Hero() {
       />
 
       {/* ================= 3D MODEL ================= */}
-      {showModel && progress < 1 && (
-        <div
-          className="fixed left-0 w-full h-screen pointer-events-none"
-          style={{
-            transform: `translateY(${modelTop}px)`,
-            zIndex: progress < 0.2 ? 0 : 10,
-          }}
-        >
-          <Canvas
-            dpr={[1, 1.5]}
-            gl={{ antialias: false, powerPreference: "high-performance" }}
-            camera={{ position: [0, 0, 6], fov: 50 }}
-          >
-            <ambientLight intensity={1} />
-            <directionalLight position={[4, 4, 4]} intensity={1.6} />
-            <Suspense fallback={null}>
-              <VRHeadset
-                progressRef={progressRef}
-                initialScale={initialScale}
-                active={showModel && progress < 1}
-              />
-            </Suspense>
-          </Canvas>
-        </div>
-      )}
+     {showModel && progress < 1 && (
+  <div
+    className="fixed left-0 w-full h-screen pointer-events-none"
+    style={{
+      transform: `translate(${isMobile ? '0px' : '0px'}, ${modelTop + (isMobile ? 50 : 0)}px)`, 
+      zIndex: progress < 0.2 ? 0 : 10,
+    }}
+  >
+    <Canvas
+      dpr={[1, 1.5]}
+      gl={{ antialias: false, powerPreference: "high-performance" }}
+      camera={{ position: [-3, -4, 6], fov: 60 }}
+    >
+      <ambientLight intensity={1} />
+      <directionalLight position={[4, 4, 4]} intensity={1.6} />
+      <Suspense fallback={null}>
+        <VRHeadset
+          progressRef={progressRef}
+          initialScale={isMobile ? initialScale * 0.9 : initialScale} // slightly smaller on mobile
+          active={showModel && progress < 1}
+        />
+      </Suspense>
+    </Canvas>
+  </div>
+)}
+
 
       {/* ================= CONTENT ================= */}
       <div
         className="absolute inset-0 flex flex-col items-center text-center px-6 pt-[25vh]"
         style={{ zIndex: 5 }}
       >
-        <h1
-          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 transition-colors duration-700"
-          style={{ color: progress >= 1 ? "#ffffff" : "#51007d" }}
-        >
-          VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
-          simulation & copilot solutions for learning and business growth
-        </h1>
+<h1
+  className="text-2xl sm:text-3xl md:text-4xl lg:text-4xl xl:text-4xl font-bold mb-6 transition-colors duration-700"
+  style={{ 
+    color: progress >= 1 ? "#ffffff" : "#51007d", 
+    maxWidth: "800px",
+    fontFamily: "Times New Roman, serif"
+  }}
+>
+  VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
+  simulation & copilot solutions for learning and business growth
+</h1>
 
-        <button className="px-8 py-3 bg-[#9000ff] text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300">
-          Osso Nurse Training →
-        </button>
+
+
+    <button className="text-sm sm:text-sm md:text-base px-4 sm:px-4 md:px-6 py-2 sm:py-2 md:py-2 bg-[#9000ff] text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300">
+  Osso Nurse Training →
+</button>
+
       </div>
     </section>
   );

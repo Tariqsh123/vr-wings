@@ -60,31 +60,25 @@ function VRCard({ name, icon, link, description }) {
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative bg-white rounded-[30px] p-8 cursor-pointer overflow-hidden transform-gpu transition-all duration-500 w-[95%] max-w-[350px] h-[420px] flex flex-col justify-between items-center group shadow-lg hover:shadow-2xl"
+      className="relative bg-white rounded-[30px] p-8 cursor-pointer overflow-hidden transform-gpu transition-transform duration-500 w-[95%] max-w-[350px] h-[420px] flex flex-col justify-between items-center group shadow-lg"
       style={{
         transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) scale(${tilt.scale})`,
       }}
     >
-      {/* Neon Gradient Border */}
-      <div className="absolute inset-0 rounded-[30px] border-2 border-gray-200 group-hover:border-purple-500 transition-all duration-500 pointer-events-none"></div>
-
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-purple-600 rounded-[30px] opacity-0 group-hover:opacity-100 transition-all duration-500 z-0"></div>
-
-      {/* Content */}
-      <div className="relative z-10 flex flex-col h-full justify-between items-center text-center">
-        <div className="mb-6 flex flex-col items-center transition-colors duration-500 group-hover:text-white">
+      {/* Remove hover overlay and border animation */}
+      <div className="relative flex flex-col h-full justify-between items-center text-center">
+        <div className="mb-6 flex flex-col items-center">
           <div className="mb-4">{icon}</div>
-          <h3 className="text-2xl font-semibold">{name}</h3>
+          <h3 className="text-2xl font-semibold text-gray-900">{name}</h3>
         </div>
-        <p className="text-gray-600 mb-6 px-2 text-center transition-colors duration-500 group-hover:text-white">
+        <p className="text-gray-600 mb-6 px-2 text-center">
           {description}
         </p>
-        <button className="mt-auto relative px-6 py-3 bg-purple-600 text-white font-semibold rounded-[30px] shadow-lg overflow-hidden group-hover:bg-white group-hover:text-purple-600 w-full max-w-[200px]">
-          <span className="absolute left-0 top-0 w-full h-full bg-white transform -translate-y-full group-hover:translate-y-0 transition-transform duration-500"></span>
-          <span className="relative z-10">Learn More</span>
+        <button className="mt-auto px-6 py-3 bg-purple-600 text-white font-semibold rounded-[30px] shadow-lg w-full max-w-[200px]">
+          Learn More
         </button>
       </div>
     </a>
   );
 }
+
