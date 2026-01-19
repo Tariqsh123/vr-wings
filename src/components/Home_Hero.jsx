@@ -2,30 +2,40 @@ import { useEffect, useRef, useState, Suspense, memo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import heroVideo from "../assets/video.webm";
+import * as THREE from "three";
 
 /* ---------- 3D MODEL ---------- */
 const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active }) {
   const ref = useRef();
   const { scene } = useGLTF("/vr-wings/vr-headset.glb");
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!ref.current || !active) return;
 
     const p = progressRef.current;
+    const time = state.clock.getElapsedTime();
 
-    // Rotation
-    ref.current.rotation.x += (p * Math.PI * 0.8 - ref.current.rotation.x) * 0.1;
-    ref.current.rotation.y += (p * Math.PI * 2.2 - ref.current.rotation.y) * 0.1;
+    // Smooth rotation with animation
+    const targetRotationX = p * Math.PI * 0.8;
+    const targetRotationY = p * Math.PI * 2.5 + Math.sin(time * 0.3) * 0.15; // Slower rotation
+    
+    // Smoother interpolation
+    ref.current.rotation.x += (targetRotationX - ref.current.rotation.x) * 0.05;
+    ref.current.rotation.y += (targetRotationY - ref.current.rotation.y) * 0.05;
 
-    // Scale
-    const maxScale = 45;
-    const targetScale = initialScale + p * (maxScale - initialScale);
-    ref.current.scale.x += (targetScale - ref.current.scale.x) * 0.15;
-    ref.current.scale.y += (targetScale - ref.current.scale.y) * 0.15;
-    ref.current.scale.z += (targetScale - ref.current.scale.z) * 0.15;
+    // Scale with pulse
+    const pulse = 1 + Math.sin(time * 1.5) * 0.03;
+    const maxScale = 1000; // Bigger model
+    const targetScale = (initialScale + p * (maxScale - initialScale)) * pulse;
+    ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.12);
 
-    ref.current.position.y = -1;
+    // Floating animation
+    ref.current.position.y = -1 + Math.sin(time * 0.4) * 0.15;
     ref.current.position.x = -0.2;
+    
+    // Add slight Z rotation
+    const targetRotationZ = Math.sin(time * 0.2) * 0.05;
+    ref.current.rotation.z += (targetRotationZ - ref.current.rotation.z) * 0.03;
   });
 
   return <primitive ref={ref} object={scene.clone()} />;
@@ -45,6 +55,8 @@ export default function Home_Hero() {
   const [initialScale, setInitialScale] = useState(5);
   const [showModel, setShowModel] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+  const [modelZIndex, setModelZIndex] = useState(1); // Start with normal z-index
 
   /* ---------- Check if mobile ---------- */
   useEffect(() => {
@@ -56,11 +68,47 @@ export default function Home_Hero() {
 
   /* ---------- Responsive scale ---------- */
   useEffect(() => {
-    const updateScale = () => setInitialScale(window.innerWidth < 768 ? 3 : 5);
+    const updateScale = () => setInitialScale(window.innerWidth < 768 ? 3.5 : 5.5);
     updateScale();
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
   }, []);
+
+  /* ---------- Update model z-index when animation starts ---------- */
+  useEffect(() => {
+    if (progress > 0 && progress < 1) {
+      // Animation is active - set z-index to 9999
+      setModelZIndex(99999);
+    } else if (progress === 0) {
+      // Reset to normal z-index when at start
+      setModelZIndex(1);
+    }
+  }, [progress]);
+
+  /* ---------- Show/Hide video based on progress ---------- */
+  useEffect(() => {
+    if (progress >= 1) {
+      setShowVideo(true);
+      setShowModel(false);
+      setScrollLocked(false);
+    } else {
+      setShowVideo(false);
+      setShowModel(true);
+    }
+  }, [progress]);
+
+  /* ---------- Hide body scroll when model is showing ---------- */
+  useEffect(() => {
+    if (showModel && progress < 1) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showModel, progress]);
 
   /* ---------- Show model when progress resets ---------- */
   useEffect(() => {
@@ -87,24 +135,25 @@ export default function Home_Hero() {
         document.body.style.overflow = "hidden";
       } else if (next >= 1) {
         setScrollLocked(false);
+        setShowVideo(true);
         document.body.style.overflow = "auto";
-        setShowModel(false);
       } else if (next <= 0) {
         setScrollLocked(false);
-        document.body.style.overflow = "auto";
-        setShowModel(true);
+        setShowVideo(false);
+        document.body.style.overflow = "hidden";
       }
     };
 
     /* ---------- PC Wheel ---------- */
     const handleWheel = (e) => {
+      if (progress >= 1) return;
+      
       if (scrollLocked || progressRef.current < 1) e.preventDefault();
-      if (!scrollLocked && progressRef.current >= 1) return;
       if (ticking) return;
 
       ticking = true;
       requestAnimationFrame(() => {
-        updateProgress(e.deltaY * 0.0016);
+        updateProgress(e.deltaY * 0.0012);
         ticking = false;
       });
     };
@@ -118,15 +167,15 @@ export default function Home_Hero() {
     };
 
     const handleTouchMove = (e) => {
+      if (progress >= 1) return;
+      
       if (scrollLocked || progressRef.current < 1) e.preventDefault();
-      if (!scrollLocked && progressRef.current >= 1) return;
 
       const currentY = e.touches[0].clientY;
       const deltaY = touchStartRef.current.y - currentY;
 
-      const multiplier = 0.01; // Increased for smooth mobile animation
+      const multiplier = 0.008;
 
-      // Cancel previous frame
       if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
 
       touchAnimationFrame = requestAnimationFrame(() => {
@@ -147,11 +196,10 @@ export default function Home_Hero() {
       if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
       document.body.style.overflow = "auto";
     };
-  }, [scrollLocked]);
+  }, [scrollLocked, progress]);
 
   /* ---------- Reverse Animation on Scroll Up ---------- */
   useEffect(() => {
-    let scrollTimeout;
     const checkForReverse = () => {
       const currentScrollY = window.scrollY;
       const sectionTop = sectionRef.current?.offsetTop || 0;
@@ -175,16 +223,17 @@ export default function Home_Hero() {
       isReversingRef.current = true;
       setScrollLocked(true);
       document.body.style.overflow = "hidden";
+      setShowVideo(false);
       setShowModel(true);
 
       const reverse = () => {
-        progressRef.current -= 0.02;
+        progressRef.current -= 0.015;
         if (progressRef.current <= 0) {
           progressRef.current = 0;
           setProgress(0);
           setScrollLocked(false);
           isReversingRef.current = false;
-          document.body.style.overflow = "auto";
+          document.body.style.overflow = "hidden";
         } else {
           setProgress(progressRef.current);
           requestAnimationFrame(reverse);
@@ -195,18 +244,13 @@ export default function Home_Hero() {
     };
 
     const handleScroll = () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(checkForReverse, 50);
+      checkForReverse();
     };
-    const handleTouchEnd = () => setTimeout(checkForReverse, 100);
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd);
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("touchend", handleTouchEnd);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [scrollLocked, progress]);
 
@@ -223,6 +267,7 @@ export default function Home_Hero() {
           progressRef.current = 0.01;
           setProgress(0.01);
           setScrollLocked(true);
+          document.body.style.overflow = "hidden";
         }
       }
     };
@@ -246,16 +291,30 @@ export default function Home_Hero() {
       style={{ touchAction: scrollLocked ? "none" : "auto" }}
     >
       {/* ================= VIDEO ================= */}
-      {progress >= 1 && (
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0"
-        >
-          <source src={heroVideo} type="video/webm" />
-        </video>
+      {showVideo && (
+        <div className="absolute inset-0 w-full h-full z-10">
+          <video
+            key="hero-video"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: showVideo ? 1 : 0,
+              transition: 'opacity 0.5s ease'
+            }}
+          >
+            <source src={heroVideo} type="video/webm" />
+          </video>
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.1))',
+              zIndex: 11
+            }}
+          />
+        </div>
       )}
 
       {/* ================= GRADIENT ================= */}
@@ -263,63 +322,145 @@ export default function Home_Hero() {
         className="absolute inset-0 transition-opacity duration-500"
         style={{
           background: "linear-gradient(to top right, #9000FF, white, white)",
-          opacity: progress >= 1 ? 0 : 1,
-          zIndex: 0,
+          opacity: showVideo ? 0 : 1,
+          zIndex: 1,
         }}
       />
 
       {/* ================= 3D MODEL ================= */}
-     {showModel && progress < 1 && (
-  <div
-    className="fixed left-0 w-full h-screen pointer-events-none"
-    style={{
-      transform: `translate(${isMobile ? '0px' : '0px'}, ${modelTop + (isMobile ? 50 : 0)}px)`, 
-      zIndex: progress < 0.2 ? 0 : 10,
-    }}
-  >
-    <Canvas
-      dpr={[1, 1.5]}
-      gl={{ antialias: false, powerPreference: "high-performance" }}
-      camera={{ position: [-3, -4, 6], fov: 60 }}
-    >
-      <ambientLight intensity={1} />
-      <directionalLight position={[4, 4, 4]} intensity={1.6} />
-      <Suspense fallback={null}>
-        <VRHeadset
-          progressRef={progressRef}
-          initialScale={isMobile ? initialScale * 0.9 : initialScale} // slightly smaller on mobile
-          active={showModel && progress < 1}
-        />
-      </Suspense>
-    </Canvas>
-  </div>
-)}
-
+      {showModel && progress < 1 && (
+        <div
+          className="fixed left-0 w-full h-screen pointer-events-none"
+          style={{
+            transform: `translate(0px, ${modelTop + (isMobile ? 50 : 0)}px)`,
+            zIndex: modelZIndex, // Dynamic z-index based on animation state
+            opacity: 1, // Always full opacity
+          }}
+        >
+          <Canvas
+            dpr={[1, 1.5]}
+            gl={{ 
+              antialias: true,
+              powerPreference: "high-performance",
+              alpha: true
+            }}
+            camera={{ position: [-3, -4, 6], fov: isMobile ? 50 : 60 }}
+          >
+            <ambientLight intensity={1.2} />
+            <directionalLight position={[4, 4, 4]} intensity={1.8} />
+            <Suspense fallback={null}>
+              <VRHeadset
+                progressRef={progressRef}
+                initialScale={isMobile ? initialScale * 0.9 : initialScale}
+                active={showModel && progress < 1}
+              />
+            </Suspense>
+          </Canvas>
+        </div>
+      )}
 
       {/* ================= CONTENT ================= */}
       <div
-        className="absolute inset-0 flex flex-col items-center text-center px-6 pt-[25vh]"
-        style={{ zIndex: 5 }}
+        className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
+        style={{
+          zIndex: 1000, // Content z-index
+          opacity: 1,
+          transform: `translateY(${progress * -10}px)`,
+          transition: 'transform 0.3s ease'
+        }}
       >
-<h1
-  className="text-2xl sm:text-3xl md:text-4xl lg:text-4xl xl:text-4xl font-bold mb-6 transition-colors duration-700"
-  style={{ 
-    color: progress >= 1 ? "#ffffff" : "#51007d", 
-    maxWidth: "800px",
-    fontFamily: "Times New Roman, serif"
-  }}
->
-  VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
-  simulation & copilot solutions for learning and business growth
-</h1>
+        <h1
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-4xl xl:text-5xl font-bold mb-6 transition-colors duration-500"
+          style={{ 
+            color: showVideo ? "#ffffff" : "#51007d", 
+            maxWidth: "1200px",
+            fontFamily: "Times New Roman, serif",
+            textShadow: showVideo ? "0 2px 10px rgba(0,0,0,0.5)" : "none",
+            opacity: 1,
+            transition: 'color 0.5s ease, text-shadow 0.5s ease'
+          }}
+        >
+          VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered
+          simulation & copilot solutions for learning and business growth
+        </h1>
 
+        <div className="relative">
+          <button 
+            className="text-sm sm:text-sm md:text-base px-4 sm:px-4 md:px-6 py-2 sm:py-2 md:py-2 bg-[#9000ff] text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105"
+            style={{
+              opacity: 1,
+              transform: `translateY(${progress * 20}px)`,
+              transition: 'all 0.3s ease',
+              boxShadow: showVideo ? "0 10px 30px rgba(144, 0, 255, 0.5)" : "0 5px 20px rgba(144, 0, 255, 0.3)"
+            }}
+          >
+            Osso Nurse Training →
+          </button>
+          
+          {showVideo && (
+            <div 
+              className="absolute inset-0 rounded-full blur-xl -z-10"
+              style={{
+                background: 'radial-gradient(circle, rgba(144,0,255,0.4) 0%, transparent 70%)',
+                opacity: 0.6,
+                transform: 'scale(1.5)'
+              }}
+            />
+          )}
+        </div>
 
+        {/* Progress indicator - only show when model is active */}
+        {showModel && progress < 1 && progress > 0 && (
+          <div 
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full overflow-hidden"
+            style={{
+              zIndex: 10000, // Higher than model during animation
+              opacity: 1,
+              transition: 'opacity 0.3s ease'
+            }}
+          >
+            <div 
+              className="h-full bg-[#9000ff] rounded-full transition-all duration-300"
+              style={{ width: `${progress * 100}%` }}
+            />
+          </div>
+        )}
 
-    <button className="text-sm sm:text-sm md:text-base px-4 sm:px-4 md:px-6 py-2 sm:py-2 md:py-2 bg-[#9000ff] text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300">
-  Osso Nurse Training →
-</button>
-
+        {/* Scroll hint - only show when at start */}
+        {progress === 0 && showModel && (
+          <div 
+            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
+            style={{
+              zIndex: 1000,
+              opacity: 0.8,
+              animation: 'fadeInOut 2s infinite'
+            }}
+          >
+            <span className="text-[#51007d] text-sm font-medium">Scroll down</span>
+            <div className="w-5 h-8 border-2 border-[#51007d]/30 rounded-full flex justify-center">
+              <div 
+                className="w-1 h-3 bg-[#9000ff] rounded-full mt-1"
+                style={{
+                  animation: 'scrollBounce 1.5s infinite'
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Custom animations */}
+      <style jsx>{`
+        @keyframes fadeInOut {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 0.4; }
+        }
+        
+        @keyframes scrollBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(5px); }
+        }
+      `}</style>
     </section>
   );
 }
