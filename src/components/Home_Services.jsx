@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FaRegEye, FaCube, FaRobot, FaGlobe, FaVrCardboard, FaMicrochip, FaBrain } from "react-icons/fa";
+import { FaRegEye, FaCube, FaRobot, FaGlobe, FaVrCardboard, FaBrain } from "react-icons/fa";
 
 const services = [
   ["ar", "AR — Augmented Reality", <FaRegEye size={40} className="text-purple-600 transition-colors duration-300" />, "Augmented Reality solutions to overlay digital content in real-world environments, boosting learning and engagement."],
@@ -15,6 +15,7 @@ export default function Home_Services() {
   return (
     <section className="relative w-full py-20 bg-white">
       <div className="max-w-[1200px] mx-auto px-6">
+        
         {/* Heading */}
         <div className="text-center mb-12">
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">
@@ -22,16 +23,17 @@ export default function Home_Services() {
           </h2>
           <div className="w-20 h-1 bg-purple-600 mx-auto rounded-full mb-4"></div>
           <p className="text-gray-600 text-lg sm:text-xl max-w-[800px] mx-auto">
-            We provide cutting-edge AR, VR, XR, VR360, simulation, and AI copilot solutions to deliver immersive learning and business growth. Explore the interactive cards below to see how our services can transform your experience.
+            We provide cutting-edge AR, VR, XR, VR360, simulation, and AI copilot solutions to deliver immersive learning and business growth.
           </p>
         </div>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 justify-items-center">
+        {/* Flex Cards Container */}
+        <div className="flex flex-wrap justify-center gap-12">
           {services.map(([key, name, icon, desc]) => (
             <VRCard key={key} name={name} icon={icon} link={`#${key}`} description={desc} />
           ))}
         </div>
+
       </div>
     </section>
   );
@@ -60,25 +62,23 @@ function VRCard({ name, icon, link, description }) {
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative bg-white rounded-[30px] p-8 cursor-pointer overflow-hidden transform-gpu transition-transform duration-500 w-[95%] max-w-[350px] h-[420px] flex flex-col justify-between items-center group shadow-lg"
+      className="relative bg-white rounded-[30px] p-8 cursor-pointer overflow-hidden transform-gpu transition-transform duration-500 w-full max-w-[350px] h-[420px] flex flex-col justify-between items-center text-center shadow-lg border-2 border-purple-600"
       style={{
         transform: `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) scale(${tilt.scale})`,
       }}
     >
-      {/* Remove hover overlay and border animation */}
-      <div className="relative flex flex-col h-full justify-between items-center text-center">
-        <div className="mb-6 flex flex-col items-center">
-          <div className="mb-4">{icon}</div>
-          <h3 className="text-2xl font-semibold text-gray-900">{name}</h3>
-        </div>
-        <p className="text-gray-600 mb-6 px-2 text-center">
-          {description}
-        </p>
-        <button className="mt-auto px-6 py-3 bg-purple-600 text-white font-semibold rounded-[30px] shadow-lg w-full max-w-[200px]">
-          Learn More
-        </button>
+      <div className="mb-6 flex flex-col items-center">
+        <div className="mb-4">{icon}</div>
+        <h3 className="text-2xl font-semibold text-gray-900">{name}</h3>
       </div>
+
+      <p className="text-gray-600 mb-6 px-2">
+        {description}
+      </p>
+
+      <button className="mt-auto px-6 py-3 bg-purple-600 text-white font-semibold rounded-[30px] shadow-lg w-full max-w-[200px]">
+        Learn More
+      </button>
     </a>
   );
 }
-
