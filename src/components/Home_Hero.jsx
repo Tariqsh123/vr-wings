@@ -57,11 +57,21 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
       onScaleStart();
     }
 
+    // Reset scale start when progress goes back to 0
+    if (p === 0 && scaleStartedRef.current) {
+      scaleStartedRef.current = false;
+    }
+
     // Trigger video at 150 degrees (0.416 progress of 360 degrees)
     // 150° / 360° = 0.416
     if (p >= 0.416 && !videoTriggeredRef.current) {
       videoTriggeredRef.current = true;
       onVideoTrigger();
+    }
+
+    // Reset video trigger when progress goes below threshold
+    if (p < 0.416 && videoTriggeredRef.current) {
+      videoTriggeredRef.current = false;
     }
 
     // Mobile - slight animation but controlled
@@ -88,27 +98,34 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
       ref.current.position.z = Math.sin(t * 0.15) * 0.003;
       
     } else {
-      // Desktop - 360 degree rotation
-      targetRotation.current.x = p * Math.PI * 0.32;
-      targetRotation.current.y = p * Math.PI * 2.0 + 0.25; // Full 360° rotation
-      
-      // Minimal idle
-      const idleY = Math.sin(t * 0.18) * 0.008;
-      const idleX = Math.sin(t * 0.12) * 0.004;
-      
-      // Smooth rotation
-      smoothRotation.current.x += (targetRotation.current.x + idleX - smoothRotation.current.x) * 0.08;
-      smoothRotation.current.y += (targetRotation.current.y + idleY - smoothRotation.current.y) * 0.08;
-      
-      ref.current.rotation.x = smoothRotation.current.x;
-      ref.current.rotation.y = smoothRotation.current.y;
-      ref.current.rotation.z = Math.sin(t * 0.1) * 0.003;
-      
-      // Optimized position
-      ref.current.position.x = -0.12 + Math.sin(t * 0.12) * 0.008;
-      ref.current.position.y = -0.45 + Math.sin(t * 0.18) * 0.015 + (p * 0.03);
-      ref.current.position.z = Math.sin(t * 0.1) * 0.005;
-    }
+  // Desktop - Premium right rotated + dynamic tilt remove
+
+  // 👇 Initial tilt gradually remove as scroll increases
+  const dynamicTilt = -0.2 * (1 - p);
+
+  targetRotation.current.x = dynamicTilt + p * Math.PI * 0.32;
+  targetRotation.current.y = p * Math.PI * 2.0 + 0.55;
+
+  // Minimal idle
+  const idleY = Math.sin(t * 0.18) * 0.008;
+  const idleX = Math.sin(t * 0.12) * 0.004;
+
+  // Smooth rotation
+  smoothRotation.current.x += 
+    (targetRotation.current.x + idleX - smoothRotation.current.x) * 0.08;
+
+  smoothRotation.current.y += 
+    (targetRotation.current.y + idleY - smoothRotation.current.y) * 0.08;
+
+  ref.current.rotation.x = smoothRotation.current.x;
+  ref.current.rotation.y = smoothRotation.current.y;
+  ref.current.rotation.z = Math.sin(t * 0.1) * 0.003;
+
+  // Optimized position - slightly higher after 360 rotation
+  ref.current.position.x = -0.12 + Math.sin(t * 0.12) * 0.008;
+  ref.current.position.y = -0.38 + Math.sin(t * 0.18) * 0.008 + (p * 0.08);
+  ref.current.position.z = Math.sin(t * 0.1) * 0.005;
+}
 
     // Optimized scaling
     const targetScale = isMobile 
@@ -134,6 +151,7 @@ export default function Home_Hero() {
   const scrollTimeoutRef = useRef(null);
   const lastTouchMoveTimeRef = useRef(0);
   const animationFrameRef = useRef(null);
+  const reverseAnimationFrameRef = useRef(null);
   const videoRef = useRef(null);
   const videoTimeoutRef = useRef(null);
 
@@ -223,7 +241,7 @@ export default function Home_Hero() {
 
   /* ---------- Optimized Progress Update ---------- */
   const updateProgress = useRef((delta) => {
-    if (isReversingRef.current || showVideo) return;
+    if (showVideo) return; // Don't update progress when video is showing
 
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -336,71 +354,145 @@ export default function Home_Hero() {
     };
   }, [scrollLocked, progress, isMobile, updateProgress, showVideo]);
 
-  /* ---------- Smooth Reverse Animation ---------- */
+  /* ---------- REVERSE ANIMATION - Works Every Time User Scrolls Up at Top ---------- */
   useEffect(() => {
-    let reverseAnimationFrame;
-    const checkForReverse = () => {
-      const currentScrollY = window.scrollY;
-      const sectionTop = sectionRef.current?.offsetTop || 0;
-      const isAtTop = currentScrollY <= sectionTop + 20;
-
-      if (!isReversingRef.current &&
-          !reverseTriggeredRef.current &&
-          scrollLocked === false &&
-          showVideo &&
-          isAtTop &&
-          currentScrollY < lastScrollYRef.current) {
-        startReverseAnimation();
-      }
-
-      lastScrollYRef.current = currentScrollY;
-    };
+    let isAnimating = false;
+    let rafId = null;
+    let lastTriggerTime = 0;
+    const COOLDOWN_MS = 500; // Cooldown between reverse animations
+    const SCROLL_UP_THRESHOLD = 30; // Minimum scroll up distance to trigger
 
     const startReverseAnimation = () => {
-      reverseTriggeredRef.current = true;
-      isReversingRef.current = true;
-      setScrollLocked(true);
+      // Don't start if already animating or if video isn't showing
+      if (isAnimating || !showVideo) return;
+
+      const now = Date.now();
+      if (now - lastTriggerTime < COOLDOWN_MS) return; // Cooldown check
+      
+      lastTriggerTime = now;
+      isAnimating = true;
+      
+      // Cancel any ongoing animations
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (reverseAnimationFrameRef.current) {
+        cancelAnimationFrame(reverseAnimationFrameRef.current);
+      }
+
+      // Set states for reverse animation
       setShowVideo(false);
       setShowModel(true);
+      setScrollLocked(true);
       setScaleStarted(false);
-      
-      // Reset progress
-      progressRef.current = 0.95;
 
-      const reverse = () => {
-        progressRef.current -= 0.005;
-        
-        if (progressRef.current <= 0) {
+      const startProgress = 0.416; // Start from the video trigger point
+      const startTime = performance.now();
+      const duration = 1000; // ms
+
+      const animateReverse = (now) => {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        // easeOutCubic: 1 - (1-t)^3 for smooth deceleration
+        const eased = 1 - Math.pow(1 - t, 3);
+        const newProgress = startProgress * (1 - eased); // from 0.416 down to 0
+
+        progressRef.current = newProgress;
+        setProgress(newProgress);
+
+        if (t < 1) {
+          reverseAnimationFrameRef.current = requestAnimationFrame(animateReverse);
+        } else {
+          // Ensure exact zero and clean up
           progressRef.current = 0;
           setProgress(0);
           setScrollLocked(false);
-          isReversingRef.current = false;
-          reverseTriggeredRef.current = false;
-          if (reverseAnimationFrame) cancelAnimationFrame(reverseAnimationFrame);
-        } else {
-          setProgress(progressRef.current);
-          reverseAnimationFrame = requestAnimationFrame(reverse);
+          isAnimating = false;
+          reverseAnimationFrameRef.current = null;
         }
       };
 
-      setTimeout(() => reverseAnimationFrame = requestAnimationFrame(reverse), 100);
+      reverseAnimationFrameRef.current = requestAnimationFrame(animateReverse);
     };
 
+    const checkScrollUp = () => {
+      const currentScrollY = window.scrollY;
+      const sectionTop = sectionRef.current?.offsetTop || 0;
+      const isAtTop = currentScrollY <= sectionTop + 50;
+      
+      // Check if user is scrolling up at the top while video is showing
+      if (showVideo && 
+          isAtTop && 
+          currentScrollY < lastScrollYRef.current && 
+          lastScrollYRef.current - currentScrollY > SCROLL_UP_THRESHOLD) {
+        startReverseAnimation();
+      }
+      
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    // Use both wheel and scroll events for maximum reliability
     const handleScroll = () => {
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-      scrollTimeoutRef.current = setTimeout(() => checkForReverse(), 150);
+      if (scrollTimeoutRef.current) {
+        cancelAnimationFrame(scrollTimeoutRef.current);
+      }
+      
+      scrollTimeoutRef.current = requestAnimationFrame(() => {
+        checkScrollUp();
+        scrollTimeoutRef.current = null;
+      });
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    const handleWheel = (e) => {
+      // If scrolling up (negative delta) while video is showing
+      if (showVideo && e.deltaY < 0) {
+        const sectionTop = sectionRef.current?.offsetTop || 0;
+        const isAtTop = window.scrollY <= sectionTop + 50;
+        
+        if (isAtTop) {
+          e.preventDefault(); // Prevent page scroll
+          startReverseAnimation();
+        }
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (!showVideo) return;
+      
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      
+      const deltaY = touchStartRef.current.y - touch.clientY;
+      const sectionTop = sectionRef.current?.offsetTop || 0;
+      const isAtTop = window.scrollY <= sectionTop + 50;
+      
+      // If user flicked up (negative delta) while at top
+      if (isAtTop && deltaY < -SCROLL_UP_THRESHOLD) {
+        startReverseAnimation();
+      }
+    };
+
+    // Add all event listeners
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (reverseAnimationFrame) cancelAnimationFrame(reverseAnimationFrame);
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchend', handleTouchEnd);
+      
+      if (scrollTimeoutRef.current) {
+        cancelAnimationFrame(scrollTimeoutRef.current);
+      }
+      if (reverseAnimationFrameRef.current) {
+        cancelAnimationFrame(reverseAnimationFrameRef.current);
+      }
     };
   }, [showVideo]);
 
-  /* ---------- Start animation from top ---------- */
+  /* ---------- Start animation from top (scroll down) ---------- */
   useEffect(() => {
     const handleScrollDown = (e) => {
       const sectionTop = sectionRef.current?.offsetTop || 0;
@@ -412,7 +504,6 @@ export default function Home_Hero() {
           window.scrollY <= sectionTop + 20 && 
           progress === 0 && 
           showModel && 
-          !isReversingRef.current &&
           !showVideo) {
         
         progressRef.current = 0.003;
@@ -483,14 +574,14 @@ export default function Home_Hero() {
       />
 
       {/* ================= 3D MODEL ================= */}
-      {showModel && !showVideo && (
+      {showModel && (
         <div 
           className="fixed left-0 w-full pointer-events-none flex items-center justify-center"
           style={{ 
             top: 0,
             height: '100vh',
             zIndex: modelZIndex, 
-            opacity: 0.82,
+            opacity: 0.9,
             transform: `translateY(${modelTop}px)`,
             transition: isMobile ? 'none' : 'transform 0.15s ease-out',
             willChange: 'transform'
@@ -542,10 +633,10 @@ export default function Home_Hero() {
         className="absolute inset-0 flex flex-col items-center justify-center text-center px-4"
         style={{ 
           zIndex: 1000, 
-          opacity: 1, 
+          opacity: showVideo ? 1 : 1 - progress * 0.3,
           transform: `translateY(${progress * -2}px)`, 
-          transition: 'transform 0.3s ease',
-          pointerEvents: scrollLocked ? 'none' : 'auto',
+          transition: 'transform 0.3s ease, opacity 0.3s ease',
+          pointerEvents: scrollLocked && !showVideo ? 'none' : 'auto',
         }}
       >
         <h1 
@@ -594,17 +685,17 @@ export default function Home_Hero() {
           </div>
         )}
 
-        {/* 150 degree marker - optional visual indicator */}
+        {/* 150 degree marker */}
         {showModel && progress >= 0.4 && progress < 0.42 && !showVideo && (
           <div 
-            className="absolute bottom-12 left-1/2 transform -translate-x-1/2 text-[#9000ff] text-xs font-medium"
+            className="absolute bottom-12 left-1/2 transform -translate-x-1/2 text-[#9000ff] text-xs font-medium animate-pulse"
             style={{ zIndex: 10000 }}
           >
             Video starting...
           </div>
         )}
 
-        {/* Scroll hint */}
+        {/* Scroll down hint */}
         {progress === 0 && showModel && !showVideo && (
           <div 
             className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
@@ -626,6 +717,29 @@ export default function Home_Hero() {
             </div>
           </div>
         )}
+
+        {/* Scroll up hint when video is showing */}
+        {showVideo && (
+          <div 
+            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
+            style={{ 
+              zIndex: 1000, 
+              opacity: 0.7, 
+              animation: 'fadeInOut 2s infinite',
+              bottom: isMobile ? '0.8rem' : '1rem'
+            }}
+          >
+            <span className="text-white text-xs font-medium">
+              Scroll up to return
+            </span>
+            <div className="w-4 h-6 border-2 border-white/30 rounded-full flex justify-center">
+              <div 
+                className="w-1 h-2 bg-white rounded-full mb-1" 
+                style={{ animation: 'reverseBounce 1.5s infinite' }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Animations */}
@@ -637,6 +751,10 @@ export default function Home_Hero() {
         @keyframes scrollBounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(3px); }
+        }
+        @keyframes reverseBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
         }
       `}</style>
     </section>

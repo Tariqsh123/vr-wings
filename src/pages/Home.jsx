@@ -1,5 +1,6 @@
 import Home_Hero from "../components/Home_Hero";
 import Home_Services from "../components/Home_Services";
+import Footer from "../components/footer";
 
 export default function Home() {
   return (
@@ -7,7 +8,7 @@ export default function Home() {
 
 <Home_Hero/>
 <Home_Services/>
-
+<Footer/>
     </div>
   );
 }
