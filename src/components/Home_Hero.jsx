@@ -63,7 +63,6 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
     }
 
     // Trigger video at 150 degrees (0.416 progress of 360 degrees)
-    // 150° / 360° = 0.416
     if (p >= 0.416 && !videoTriggeredRef.current) {
       videoTriggeredRef.current = true;
       onVideoTrigger();
@@ -74,62 +73,63 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
       videoTriggeredRef.current = false;
     }
 
-    // Mobile - slight animation but controlled
+    // MOBILE - STATIC POSITION SAME AS PC
     if (isMobile) {
-      // 360 degree rotation (2 * PI radians)
-      targetRotation.current.x = p * 0.25;
-      targetRotation.current.y = p * Math.PI * 2.0 + 0.35; // Full 360° rotation
-      
-      // Very subtle idle animation
-      const idleY = Math.sin(t * 0.5) * 0.005 * (1 - p);
-      const idleX = Math.cos(t * 0.4) * 0.003 * (1 - p);
-      
+      // Use same rotation logic as desktop but adjusted for mobile view
+      const dynamicTilt = -0.2 * (1 - p);
+      targetRotation.current.x = dynamicTilt + p * Math.PI * 0.32;
+      targetRotation.current.y = p * Math.PI * 2.0 + 0.55;
+
+      // Minimal idle (same as desktop)
+      const idleY = Math.sin(t * 0.18) * 0.008;
+      const idleX = Math.sin(t * 0.12) * 0.004;
+
       // Smooth rotation
-      smoothRotation.current.x += (targetRotation.current.x + idleX - smoothRotation.current.x) * 0.06;
-      smoothRotation.current.y += (targetRotation.current.y + idleY - smoothRotation.current.y) * 0.06;
-      
+      smoothRotation.current.x += 
+        (targetRotation.current.x + idleX - smoothRotation.current.x) * 0.08;
+
+      smoothRotation.current.y += 
+        (targetRotation.current.y + idleY - smoothRotation.current.y) * 0.08;
+
       ref.current.rotation.x = smoothRotation.current.x;
       ref.current.rotation.y = smoothRotation.current.y;
-      ref.current.rotation.z = Math.sin(t * 0.3) * 0.002 * (1 - p);
-      
-      // Stable position
-      ref.current.position.x = 0.22 + Math.sin(t * 0.2) * 0.005;
-      ref.current.position.y = -0.08 + Math.cos(t * 0.25) * 0.005 + (p * 0.02);
-      ref.current.position.z = Math.sin(t * 0.15) * 0.003;
+      ref.current.rotation.z = Math.sin(t * 0.1) * 0.003;
+
+      // POSITION - Optimized for mobile view but same style as PC
+      ref.current.position.x = -0.05 + Math.sin(t * 0.12) * 0.008; // Slightly adjusted for mobile
+      ref.current.position.y = -0.25 + Math.sin(t * 0.18) * 0.008 + (p * 0.08);
+      ref.current.position.z = Math.sin(t * 0.1) * 0.005;
       
     } else {
-  // Desktop - Premium right rotated + dynamic tilt remove
+      // Desktop - Premium right rotated + dynamic tilt
+      const dynamicTilt = -0.2 * (1 - p);
+      targetRotation.current.x = dynamicTilt + p * Math.PI * 0.32;
+      targetRotation.current.y = p * Math.PI * 2.0 + 0.55;
 
-  // 👇 Initial tilt gradually remove as scroll increases
-  const dynamicTilt = -0.2 * (1 - p);
+      // Minimal idle
+      const idleY = Math.sin(t * 0.18) * 0.008;
+      const idleX = Math.sin(t * 0.12) * 0.004;
 
-  targetRotation.current.x = dynamicTilt + p * Math.PI * 0.32;
-  targetRotation.current.y = p * Math.PI * 2.0 + 0.55;
+      // Smooth rotation
+      smoothRotation.current.x += 
+        (targetRotation.current.x + idleX - smoothRotation.current.x) * 0.08;
 
-  // Minimal idle
-  const idleY = Math.sin(t * 0.18) * 0.008;
-  const idleX = Math.sin(t * 0.12) * 0.004;
+      smoothRotation.current.y += 
+        (targetRotation.current.y + idleY - smoothRotation.current.y) * 0.08;
 
-  // Smooth rotation
-  smoothRotation.current.x += 
-    (targetRotation.current.x + idleX - smoothRotation.current.x) * 0.08;
+      ref.current.rotation.x = smoothRotation.current.x;
+      ref.current.rotation.y = smoothRotation.current.y;
+      ref.current.rotation.z = Math.sin(t * 0.1) * 0.003;
 
-  smoothRotation.current.y += 
-    (targetRotation.current.y + idleY - smoothRotation.current.y) * 0.08;
+      // Optimized position - slightly higher after 360 rotation
+      ref.current.position.x = -0.12 + Math.sin(t * 0.12) * 0.008;
+      ref.current.position.y = -0.38 + Math.sin(t * 0.18) * 0.008 + (p * 0.08);
+      ref.current.position.z = Math.sin(t * 0.1) * 0.005;
+    }
 
-  ref.current.rotation.x = smoothRotation.current.x;
-  ref.current.rotation.y = smoothRotation.current.y;
-  ref.current.rotation.z = Math.sin(t * 0.1) * 0.003;
-
-  // Optimized position - slightly higher after 360 rotation
-  ref.current.position.x = -0.12 + Math.sin(t * 0.12) * 0.008;
-  ref.current.position.y = -0.38 + Math.sin(t * 0.18) * 0.008 + (p * 0.08);
-  ref.current.position.z = Math.sin(t * 0.1) * 0.005;
-}
-
-    // Optimized scaling
+    // Optimized scaling with mobile-specific values
     const targetScale = isMobile 
-      ? initialScale + p * (300 - initialScale)
+      ? initialScale + p * (220 - initialScale) // Adjusted scale for mobile
       : initialScale + p * (380 - initialScale);
     
     const currentScale = ref.current.scale.x;
@@ -144,17 +144,15 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
 export default function Home_Hero() {
   const sectionRef = useRef(null);
   const progressRef = useRef(0);
-  const isReversingRef = useRef(false);
   const lastScrollYRef = useRef(0);
   const touchStartRef = useRef({ y: 0, time: 0 });
-  const reverseTriggeredRef = useRef(false);
   const scrollTimeoutRef = useRef(null);
   const lastTouchMoveTimeRef = useRef(0);
   const animationFrameRef = useRef(null);
   const reverseAnimationFrameRef = useRef(null);
   const videoRef = useRef(null);
-  const videoTimeoutRef = useRef(null);
-
+  
+  // State management
   const [progress, setProgress] = useState(0);
   const [scrollLocked, setScrollLocked] = useState(true);
   const [initialScale, setInitialScale] = useState(5);
@@ -164,24 +162,42 @@ export default function Home_Hero() {
   const [modelZIndex, setModelZIndex] = useState(1);
   const [videoReady, setVideoReady] = useState(false);
   const [scaleStarted, setScaleStarted] = useState(false);
+  const [windowHeight, setWindowHeight] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(0);
 
-  /* ---------- Perfect device detection ---------- */
+  /* ---------- Responsive detection ---------- */
   useEffect(() => {
-    const checkMobile = () => {
+    const handleResize = () => {
       const width = window.innerWidth;
-      const mobile = width < 768;
+      const height = window.innerHeight;
+      setWindowWidth(width);
+      setWindowHeight(height);
+      
+      // Enhanced mobile detection
+      const mobile = width < 768 || (width < 900 && height < 800);
       setIsMobile(mobile);
       
+      // Adjust initial scale based on screen size
       if (mobile) {
-        setInitialScale(3.6);
+        if (width < 380) {
+          setInitialScale(3.2); // Small phones - slightly larger for better visibility
+        } else if (width < 480) {
+          setInitialScale(3.8); // Regular phones
+        } else {
+          setInitialScale(4.2); // Large phones
+        }
       } else {
-        setInitialScale(3.0);
+        if (width < 1024) {
+          setInitialScale(3.5); // Tablets
+        } else {
+          setInitialScale(3.0); // Desktop
+        }
       }
     };
     
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   /* ---------- Z-index management ---------- */
@@ -200,7 +216,6 @@ export default function Home_Hero() {
   /* ---------- Handle video trigger at 150 degrees ---------- */
   const handleVideoTrigger = () => {
     if (!showVideo) {
-      // Show video immediately at 150 degrees
       setShowVideo(true);
       setShowModel(false);
       setScrollLocked(false);
@@ -231,24 +246,41 @@ export default function Home_Hero() {
   useEffect(() => {
     if (showModel && progress < 1 && !showVideo) {
       document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.top = `-${window.scrollY}px`;
     } else {
+      const scrollY = document.body.style.top;
       document.body.style.overflow = "auto";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
     return () => { 
       document.body.style.overflow = "auto";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
     };
   }, [showModel, progress, showVideo]);
 
   /* ---------- Optimized Progress Update ---------- */
   const updateProgress = useRef((delta) => {
-    if (showVideo) return; // Don't update progress when video is showing
+    if (showVideo) return;
 
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
 
     animationFrameRef.current = requestAnimationFrame(() => {
-      const sensitivity = isMobile ? 0.55 : 0.4;
+      // Mobile-optimized sensitivity
+      const sensitivity = isMobile 
+        ? (windowWidth < 380 ? 0.5 : 0.55) // Adjusted for better control
+        : 0.4;
+      
       const smoothDelta = delta * sensitivity;
       
       let next = Math.min(Math.max(progressRef.current + smoothDelta, 0), 1);
@@ -289,6 +321,7 @@ export default function Home_Hero() {
 
       ticking = true;
       
+      // Mobile-optimized delta
       const delta = e.deltaY * (isMobile ? 0.00065 : 0.00055);
       
       requestAnimationFrame(() => {
@@ -306,7 +339,7 @@ export default function Home_Hero() {
       if (showVideo) return;
       
       const now = Date.now();
-      if (now - lastTouchMoveTimeRef.current < 12) return;
+      if (now - lastTouchMoveTimeRef.current < 16) return;
       lastTouchMoveTimeRef.current = now;
 
       if (scrollLocked || progressRef.current < 1) {
@@ -316,7 +349,8 @@ export default function Home_Hero() {
       const currentY = e.touches[0].clientY;
       const deltaY = touchStartRef.current.y - currentY;
 
-      const multiplier = 0.002;
+      // Mobile-optimized multiplier
+      const multiplier = windowWidth < 380 ? 0.002 : 0.0022;
       
       if (touchAnimationFrame) {
         cancelAnimationFrame(touchAnimationFrame);
@@ -352,27 +386,24 @@ export default function Home_Hero() {
       if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [scrollLocked, progress, isMobile, updateProgress, showVideo]);
+  }, [scrollLocked, progress, isMobile, updateProgress, showVideo, windowWidth]);
 
-  /* ---------- REVERSE ANIMATION - Works Every Time User Scrolls Up at Top ---------- */
+  /* ---------- REVERSE ANIMATION ---------- */
   useEffect(() => {
     let isAnimating = false;
-    let rafId = null;
     let lastTriggerTime = 0;
-    const COOLDOWN_MS = 500; // Cooldown between reverse animations
-    const SCROLL_UP_THRESHOLD = 30; // Minimum scroll up distance to trigger
+    const COOLDOWN_MS = 500;
+    const SCROLL_UP_THRESHOLD = isMobile ? 15 : 30;
 
     const startReverseAnimation = () => {
-      // Don't start if already animating or if video isn't showing
       if (isAnimating || !showVideo) return;
 
       const now = Date.now();
-      if (now - lastTriggerTime < COOLDOWN_MS) return; // Cooldown check
+      if (now - lastTriggerTime < COOLDOWN_MS) return;
       
       lastTriggerTime = now;
       isAnimating = true;
       
-      // Cancel any ongoing animations
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
@@ -381,22 +412,20 @@ export default function Home_Hero() {
         cancelAnimationFrame(reverseAnimationFrameRef.current);
       }
 
-      // Set states for reverse animation
       setShowVideo(false);
       setShowModel(true);
       setScrollLocked(true);
       setScaleStarted(false);
 
-      const startProgress = 0.416; // Start from the video trigger point
+      const startProgress = 0.416;
       const startTime = performance.now();
-      const duration = 1000; // ms
+      const duration = isMobile ? 800 : 1000;
 
       const animateReverse = (now) => {
         const elapsed = now - startTime;
         const t = Math.min(elapsed / duration, 1);
-        // easeOutCubic: 1 - (1-t)^3 for smooth deceleration
         const eased = 1 - Math.pow(1 - t, 3);
-        const newProgress = startProgress * (1 - eased); // from 0.416 down to 0
+        const newProgress = startProgress * (1 - eased);
 
         progressRef.current = newProgress;
         setProgress(newProgress);
@@ -404,7 +433,6 @@ export default function Home_Hero() {
         if (t < 1) {
           reverseAnimationFrameRef.current = requestAnimationFrame(animateReverse);
         } else {
-          // Ensure exact zero and clean up
           progressRef.current = 0;
           setProgress(0);
           setScrollLocked(false);
@@ -419,9 +447,8 @@ export default function Home_Hero() {
     const checkScrollUp = () => {
       const currentScrollY = window.scrollY;
       const sectionTop = sectionRef.current?.offsetTop || 0;
-      const isAtTop = currentScrollY <= sectionTop + 50;
+      const isAtTop = currentScrollY <= sectionTop + (isMobile ? 20 : 50);
       
-      // Check if user is scrolling up at the top while video is showing
       if (showVideo && 
           isAtTop && 
           currentScrollY < lastScrollYRef.current && 
@@ -432,7 +459,6 @@ export default function Home_Hero() {
       lastScrollYRef.current = currentScrollY;
     };
 
-    // Use both wheel and scroll events for maximum reliability
     const handleScroll = () => {
       if (scrollTimeoutRef.current) {
         cancelAnimationFrame(scrollTimeoutRef.current);
@@ -445,13 +471,12 @@ export default function Home_Hero() {
     };
 
     const handleWheel = (e) => {
-      // If scrolling up (negative delta) while video is showing
       if (showVideo && e.deltaY < 0) {
         const sectionTop = sectionRef.current?.offsetTop || 0;
-        const isAtTop = window.scrollY <= sectionTop + 50;
+        const isAtTop = window.scrollY <= sectionTop + (isMobile ? 20 : 50);
         
         if (isAtTop) {
-          e.preventDefault(); // Prevent page scroll
+          e.preventDefault();
           startReverseAnimation();
         }
       }
@@ -465,15 +490,13 @@ export default function Home_Hero() {
       
       const deltaY = touchStartRef.current.y - touch.clientY;
       const sectionTop = sectionRef.current?.offsetTop || 0;
-      const isAtTop = window.scrollY <= sectionTop + 50;
+      const isAtTop = window.scrollY <= sectionTop + (isMobile ? 20 : 50);
       
-      // If user flicked up (negative delta) while at top
       if (isAtTop && deltaY < -SCROLL_UP_THRESHOLD) {
         startReverseAnimation();
       }
     };
 
-    // Add all event listeners
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -490,9 +513,9 @@ export default function Home_Hero() {
         cancelAnimationFrame(reverseAnimationFrameRef.current);
       }
     };
-  }, [showVideo]);
+  }, [showVideo, isMobile, windowWidth]);
 
-  /* ---------- Start animation from top (scroll down) ---------- */
+  /* ---------- Start animation from top ---------- */
   useEffect(() => {
     const handleScrollDown = (e) => {
       const sectionTop = sectionRef.current?.offsetTop || 0;
@@ -501,7 +524,7 @@ export default function Home_Hero() {
         : (touchStartRef.current.y - (e.touches[0]?.clientY || 0)) < 0;
       
       if (isScrollingDown && 
-          window.scrollY <= sectionTop + 20 && 
+          window.scrollY <= sectionTop + (isMobile ? 10 : 20) && 
           progress === 0 && 
           showModel && 
           !showVideo) {
@@ -519,23 +542,31 @@ export default function Home_Hero() {
       window.removeEventListener("wheel", handleScrollDown);
       window.removeEventListener("touchmove", handleScrollDown);
     };
-  }, [progress, showModel, showVideo]);
+  }, [progress, showModel, showVideo, isMobile]);
 
   /* ---------- Model position ---------- */
   const modelTop = isMobile 
-    ? 3 * (1 - Math.min(progress * 10, 1))
+    ? 1.5 * (1 - Math.min(progress * 10, 1)) // Reduced movement for mobile
     : 12 * (1 - Math.min(progress * 8, 1));
+
+  // Camera position based on device
+  const cameraPosition = isMobile 
+    ? windowWidth < 380 
+      ? [0.0, -0.2, 5.8] // Small phones - centered
+      : [0.05, -0.25, 6.2] // Regular phones - slightly adjusted
+    : [-0.9, -1.4, 6.2]; // Desktop
 
   return (
     <section 
       ref={sectionRef} 
       className="relative w-full overflow-hidden"
       style={{ 
-        height: '100vh',
+        height: windowHeight || '100vh',
         touchAction: scrollLocked ? "none" : "auto",
+        WebkitOverflowScrolling: 'touch'
       }}
     >
-      {/* ================= VIDEO (Shows at 150 degrees) ================= */}
+      {/* ================= VIDEO ================= */}
       {showVideo && (
         <div className="absolute inset-0 w-full h-full z-10">
           <video 
@@ -579,7 +610,7 @@ export default function Home_Hero() {
           className="fixed left-0 w-full pointer-events-none flex items-center justify-center"
           style={{ 
             top: 0,
-            height: '100vh',
+            height: windowHeight || '100vh',
             zIndex: modelZIndex, 
             opacity: 0.9,
             transform: `translateY(${modelTop}px)`,
@@ -589,7 +620,7 @@ export default function Home_Hero() {
         >
           <div className="relative w-full h-full">
             <Canvas 
-              dpr={[1, 1.2]}
+              dpr={[1, isMobile ? 1.2 : 1.5]}
               gl={{ 
                 antialias: true, 
                 powerPreference: "high-performance", 
@@ -599,18 +630,16 @@ export default function Home_Hero() {
                 toneMappingExposure: 1.25
               }}
               camera={{ 
-                position: isMobile 
-                  ? [0.2, -0.4, 7.0]
-                  : [-0.9, -1.4, 6.2],
-                fov: isMobile ? 38 : 42
+                position: cameraPosition,
+                fov: isMobile ? (windowWidth < 380 ? 40 : 38) : 42
               }}
               onCreated={({ gl }) => { 
-                gl.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+                gl.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
               }}
               style={{ width: '100%', height: '100%' }}
             >
-              <ambientLight intensity={1.6} />
-              <directionalLight position={[3, 3, 3]} intensity={1.5} />
+              <ambientLight intensity={isMobile ? 1.8 : 1.6} />
+              <directionalLight position={[3, 3, 3]} intensity={isMobile ? 1.8 : 1.5} />
               <directionalLight position={[-2, 1, 2]} intensity={0.7} color="#bbddff" />
               <pointLight position={[1, 1, 2]} intensity={0.5} color="#ffffff" />
               <Suspense fallback={null}>
@@ -634,7 +663,7 @@ export default function Home_Hero() {
         style={{ 
           zIndex: 1000, 
           opacity: showVideo ? 1 : 1 - progress * 0.3,
-          transform: `translateY(${progress * -2}px)`, 
+          transform: `translateY(${progress * (isMobile ? -0.5 : -2)}px)`, 
           transition: 'transform 0.3s ease, opacity 0.3s ease',
           pointerEvents: scrollLocked && !showVideo ? 'none' : 'auto',
         }}
@@ -647,10 +676,14 @@ export default function Home_Hero() {
             textShadow: showVideo ? "0 2px 15px rgba(0,0,0,0.6)" : "none",
             transition: 'color 0.5s ease',
             fontSize: isMobile 
-              ? 'clamp(1.3rem, 4vw, 1.6rem)'
+              ? windowWidth < 380
+                ? 'clamp(1rem, 3.5vw, 1.2rem)'
+                : 'clamp(1.2rem, 4vw, 1.5rem)'
               : 'clamp(2rem, 2.8vw, 2.5rem)',
-            lineHeight: '1.3',
-            maxWidth: isMobile ? '85%' : '750px',
+            lineHeight: isMobile ? '1.2' : '1.3',
+            maxWidth: isMobile 
+              ? windowWidth < 380 ? '90%' : '85%'
+              : '750px',
           }}
         >
           VR Wing delivers cutting-edge AR, VR, XR, VR360, and AI-powered simulation solutions
@@ -664,8 +697,12 @@ export default function Home_Hero() {
               transform: `translateY(${progress * 5}px)`, 
               transition: 'all 0.3s ease',
               boxShadow: showVideo ? "0 10px 30px rgba(144, 0, 255, 0.5)" : "0 5px 20px rgba(144, 0, 255, 0.3)",
-              fontSize: isMobile ? '0.8rem' : '0.95rem',
-              padding: isMobile ? '0.5rem 1rem' : '0.6rem 1.6rem'
+              fontSize: isMobile 
+                ? windowWidth < 380 ? '0.7rem' : '0.8rem'
+                : '0.95rem',
+              padding: isMobile 
+                ? windowWidth < 380 ? '0.4rem 0.8rem' : '0.5rem 1rem'
+                : '0.6rem 1.6rem'
             }}
           >
             Osso Nurse Training →
@@ -698,12 +735,14 @@ export default function Home_Hero() {
         {/* Scroll down hint */}
         {progress === 0 && showModel && !showVideo && (
           <div 
-            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
+            className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
             style={{ 
               zIndex: 1000, 
               opacity: 0.7, 
               animation: 'fadeInOut 2s infinite',
-              bottom: isMobile ? '0.8rem' : '1rem'
+              bottom: isMobile 
+                ? windowWidth < 380 ? '0.5rem' : '0.8rem'
+                : '1rem'
             }}
           >
             <span className="text-[#51007d] text-xs font-medium">
@@ -721,12 +760,14 @@ export default function Home_Hero() {
         {/* Scroll up hint when video is showing */}
         {showVideo && (
           <div 
-            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
+            className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2"
             style={{ 
               zIndex: 1000, 
               opacity: 0.7, 
               animation: 'fadeInOut 2s infinite',
-              bottom: isMobile ? '0.8rem' : '1rem'
+              bottom: isMobile 
+                ? windowWidth < 380 ? '0.5rem' : '0.8rem'
+                : '1rem'
             }}
           >
             <span className="text-white text-xs font-medium">

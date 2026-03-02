@@ -14,13 +14,13 @@
   object-fit: cover;
 }
 
-
-
 .footer {
   background: linear-gradient(to right, #fff, #e9d7f7);
   padding: 60px 80px 20px;
   font-family: "Inter", sans-serif;
   color: #2c2c54;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .footer-container {
@@ -28,6 +28,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .footer-left {
@@ -49,14 +51,17 @@
   display: flex;
   gap: 15px;
   margin-bottom: 25px;
+  flex-wrap: wrap;
 }
 
 .subscribe-box input {
   flex: 1;
+  min-width: 200px;
   padding: 12px 16px;
   border-radius: 10px;
   border: 1px solid #a78bfa;
   outline: none;
+  font-size: 16px; /* Prevents zoom on mobile */
 }
 
 .subscribe-box button {
@@ -67,6 +72,7 @@
   color: white;
   cursor: pointer;
   transition: 0.3s;
+  white-space: nowrap;
 }
 
 .subscribe-box button:hover {
@@ -79,6 +85,7 @@
   font-size: 20px;
   margin-bottom: 20px;
   cursor: pointer;
+  flex-wrap: wrap;
 }
 
 .footer-description {
@@ -94,16 +101,24 @@
   justify-content: space-between;
   flex-wrap: wrap;
   min-width: 300px;
+  gap: 30px;
+}
+
+.footer-column {
+  flex: 1 1 auto;
+  min-width: 140px;
 }
 
 .footer-column h4 {
   margin-bottom: 15px;
   font-weight: 600;
+  font-size: 16px;
 }
 
 .footer-column ul {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .footer-column li {
@@ -120,21 +135,146 @@
 .footer-bottom {
   text-align: center;
   margin-top: 50px;
+  padding-top: 20px;
   font-size: 13px;
   color: #666;
+  border-top: 1px solid rgba(139, 92, 246, 0.1);
 }
 
-/* Responsive */
+/* Responsive Styles */
+@media (max-width: 1200px) {
+  .footer {
+    padding: 50px 40px 20px;
+  }
+}
+
 @media (max-width: 900px) {
   .footer {
-    padding: 40px 20px;
+    padding: 40px 30px 20px;
   }
 
   .footer-container {
     flex-direction: column;
+    gap: 30px;
+  }
+
+  .footer-left {
+    min-width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
 
   .footer-right {
-    gap: 30px;
+    min-width: 100%;
+    gap: 25px;
+  }
+
+  .footer-heading {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  .footer {
+    padding: 30px 20px 15px;
+  }
+
+  .footer-heading {
+    font-size: 28px;
+    margin-bottom: 15px;
+  }
+
+  .footer-logo {
+    width: 85%;
+  }
+
+  .subscribe-box {
+    /* flex-direction: column; */
+    gap: 10px;
+  }
+
+  .subscribe-box input {
+    width: 100%;
+    min-width: 100%;
+    padding: 14px 16px; /* Larger touch target */
+  }
+
+  .subscribe-box button {
+    width: 100%;
+    padding: 14px 22px; /* Larger touch target */
+  }
+
+  .social-icons {
+    gap: 25px; /* More spacing for easier tapping */
+    justify-content: center;
+    font-size: 24px; /* Larger icons for mobile */
+    margin: 25px 0;
+  }
+
+  .footer-description {
+    max-width: 100%;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .footer-right {
+    flex-direction: column;
+    gap: 25px;
+  }
+
+  .footer-column {
+    min-width: 100%;
+    text-align: center;
+  }
+
+  .footer-column ul {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .footer-column li {
+    font-size: 15px; /* Larger text for mobile */
+    padding: 5px 0; /* Larger touch target */
+  }
+
+  .footer-bottom {
+    margin-top: 30px;
+    padding-top: 15px;
+    font-size: 12px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .footer {
+    padding: 25px 15px 15px;
+  }
+
+  .footer-heading {
+    font-size: large;
+  }
+
+  .social-icons {
+    gap: 18px;
+    font-size: 22px;
+  }
+}
+
+/* Handle landscape orientation */
+@media (max-height: 500px) and (orientation: landscape) {
+  .footer {
+    padding: 30px 20px;
+  }
+
+  .footer-right {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .footer-column {
+    min-width: 120px;
   }
 }
