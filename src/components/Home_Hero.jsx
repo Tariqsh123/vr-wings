@@ -87,8 +87,8 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
     
     // Dynamic tilt based on progress - REDUCED ROTATION SPEED
     const dynamicTilt = -0.25 * (1 - easedP);
-    targetRotation.current.x = dynamicTilt + easedP * Math.PI * 0.25; // Changed from 0.35 to 0.25
-    targetRotation.current.y = easedP * Math.PI * 1.5 + 0.55; // Changed from 2.0 to 1.5 (25% slower)
+    targetRotation.current.x = dynamicTilt + easedP * Math.PI * 0.25;
+    targetRotation.current.y = easedP * Math.PI * 1.5 + 0.55;
 
     // Subtle idle animations
     const idleY = Math.sin(t * 0.12) * 0.006;
@@ -347,7 +347,7 @@ export default function Home_Hero() {
     if (!showVideo) {
       setShowVideo(true);
       setShowModel(false);
-      setScrollLocked(false);
+      setScrollLocked(false); // IMPORTANT: Unlock scroll when video starts
     }
   };
 
@@ -375,13 +375,16 @@ export default function Home_Hero() {
     };
   }, []);
 
+  // FIXED: Scroll lock management
   useEffect(() => {
     if (showModel && progress < 1 && !showVideo) {
+      // Only lock scroll when model is showing and progress is less than 1
       document.body.style.overflow = "hidden";
       document.body.style.position = "fixed";
       document.body.style.width = "100%";
       document.body.style.top = `-${window.scrollY}px`;
     } else {
+      // Always unlock scroll when video is showing or progress is complete
       const scrollY = document.body.style.top;
       document.body.style.overflow = "auto";
       document.body.style.position = "";
@@ -397,10 +400,10 @@ export default function Home_Hero() {
       document.body.style.width = "";
       document.body.style.top = "";
     };
-  }, [showModel, progress, showVideo]);
+  }, [showModel, progress, showVideo]); // Added showVideo to dependencies
 
   const updateProgress = useRef((delta) => {
-    if (showVideo) return;
+    if (showVideo) return; // Don't update progress when video is showing
 
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -424,11 +427,10 @@ export default function Home_Hero() {
       progressRef.current = next;
       setProgress(next);
 
-      if (next > 0 && next < 1) {
+      // Update scroll lock state based on progress
+      if (next > 0 && next < 1 && !showVideo) {
         setScrollLocked(true);
-      } else if (next >= 1) {
-        setScrollLocked(false);
-      } else if (next <= 0) {
+      } else {
         setScrollLocked(false);
       }
       
@@ -436,13 +438,17 @@ export default function Home_Hero() {
     });
   }).current;
 
+  // FIXED: Scroll handler to respect video state
   useEffect(() => {
     let ticking = false;
     let touchAnimationFrame;
     let lastWheelTime = 0;
 
     const handleWheel = (e) => {
-      if (showVideo) return;
+      if (showVideo) {
+        // When video is showing, allow normal scrolling
+        return;
+      }
       
       const now = Date.now();
       if (now - lastWheelTime < 8) return;
@@ -466,13 +472,13 @@ export default function Home_Hero() {
     };
 
     const handleTouchStart = (e) => {
-      if (showVideo) return;
+      if (showVideo) return; // Allow normal touch when video is showing
       touchStartRef.current = { y: e.touches[0].clientY, time: Date.now() };
       wheelVelocityRef.current = 0;
     };
 
     const handleTouchMove = (e) => {
-      if (showVideo) return;
+      if (showVideo) return; // Allow normal touch when video is showing
       
       const now = Date.now();
       if (now - lastTouchMoveTimeRef.current < 12) return;
@@ -521,8 +527,9 @@ export default function Home_Hero() {
       if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [scrollLocked, progress, isMobile, updateProgress, showVideo, windowWidth]);
+  }, [scrollLocked, progress, isMobile, updateProgress, showVideo, windowWidth]); // Added showVideo dependency
 
+  // REVERSE ANIMATION - FIXED to properly handle scroll
   useEffect(() => {
     let isAnimating = false;
     let lastTriggerTime = 0;
@@ -548,7 +555,7 @@ export default function Home_Hero() {
 
       setShowVideo(false);
       setShowModel(true);
-      setScrollLocked(true);
+      setScrollLocked(true); // Lock scroll while reversing animation
       setScaleStarted(false);
 
       const startProgress = 0.416;
@@ -573,7 +580,7 @@ export default function Home_Hero() {
         } else {
           progressRef.current = 0;
           setProgress(0);
-          setScrollLocked(false);
+          setScrollLocked(false); // Unlock when reverse animation completes
           isAnimating = false;
           reverseAnimationFrameRef.current = null;
         }
@@ -653,6 +660,7 @@ export default function Home_Hero() {
     };
   }, [showVideo, isMobile, windowWidth]);
 
+  // Start animation from top
   useEffect(() => {
     const handleScrollDown = (e) => {
       const sectionTop = sectionRef.current?.offsetTop || 0;
@@ -694,10 +702,11 @@ export default function Home_Hero() {
   return (
     <section 
       ref={sectionRef} 
-      className="relative w-full overflow-hidden"
+      className="relative w-full"
       style={{ 
         height: windowHeight || '100vh',
-        touchAction: scrollLocked ? "none" : "auto",
+        overflow: showVideo ? 'visible' : 'hidden', // Allow scrolling when video shows
+        touchAction: scrollLocked && !showVideo ? "none" : "auto",
         WebkitOverflowScrolling: 'touch'
       }}
     >
@@ -735,7 +744,8 @@ export default function Home_Hero() {
         style={{ 
           background: "linear-gradient(to top right, #9000FF, white, white)", 
           opacity: showVideo ? 0 : Math.max(1 - progress * 2, 0.2), 
-          zIndex: 1 
+          zIndex: 1,
+          pointerEvents: 'none'
         }}
       />
 
