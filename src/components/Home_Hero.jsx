@@ -44,7 +44,10 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
 
     const p = Math.max(0, Math.min(1, progressRef.current));
     const t = state.clock.getElapsedTime();
-    const smoothFactor = Math.min(delta * 8.5, 0.15); // Reduced for slower transitions
+    // Mobile gets faster smoothing factor
+    const smoothFactor = isMobile 
+      ? Math.min(delta * 15, 0.28)  // Much faster for mobile
+      : Math.min(delta * 8.5, 0.15); // PC speed unchanged
 
     // Triggers
     if (p > 0.009 && !scaleStartedRef.current) {
@@ -67,23 +70,25 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
     targetRotation.current.x = dynamicTilt + easedP * Math.PI * 0.28;
     targetRotation.current.y = easedP * Math.PI * 1.58 + 0.58;
 
-    // Subtle idle
-    const idleY = Math.sin(t * 0.11) * 0.0055;
-    const idleX = Math.sin(t * 0.075) * 0.0028;
-    const idleZ = Math.sin(t * 0.095) * 0.0018;
+    // Subtle idle - slightly faster idle for mobile
+    const idleSpeed = isMobile ? 0.18 : 0.11;
+    const idleY = Math.sin(t * idleSpeed) * 0.0055;
+    const idleX = Math.sin(t * (isMobile ? 0.12 : 0.075)) * 0.0028;
+    const idleZ = Math.sin(t * (isMobile ? 0.15 : 0.095)) * 0.0018;
 
-    smoothRotation.current.x += (targetRotation.current.x + idleX - smoothRotation.current.x) * smoothFactor * 0.65;
-    smoothRotation.current.y += (targetRotation.current.y + idleY - smoothRotation.current.y) * smoothFactor * 0.65;
+    smoothRotation.current.x += (targetRotation.current.x + idleX - smoothRotation.current.x) * smoothFactor * (isMobile ? 0.85 : 0.65);
+    smoothRotation.current.y += (targetRotation.current.y + idleY - smoothRotation.current.y) * smoothFactor * (isMobile ? 0.85 : 0.65);
 
     ref.current.rotation.x = smoothRotation.current.x;
     ref.current.rotation.y = smoothRotation.current.y;
     ref.current.rotation.z = idleZ;
 
-    // Position - more natural breathing
+    // Position - faster breathing for mobile
+    const breathSpeed = isMobile ? 0.15 : 0.09;
     if (isMobile) {
-      smoothPosition.current.x += (-0.04 + Math.sin(t * 0.09) * 0.005 - smoothPosition.current.x) * smoothFactor;
-      smoothPosition.current.y += (-0.23 + Math.sin(t * 0.14) * 0.0055 + easedP * 0.08 - smoothPosition.current.y) * smoothFactor;
-      smoothPosition.current.z += (Math.sin(t * 0.07) * 0.0035 - smoothPosition.current.z) * smoothFactor;
+      smoothPosition.current.x += (-0.04 + Math.sin(t * breathSpeed) * 0.005 - smoothPosition.current.x) * smoothFactor;
+      smoothPosition.current.y += (-0.23 + Math.sin(t * (isMobile ? 0.22 : 0.14)) * 0.0055 + easedP * 0.08 - smoothPosition.current.y) * smoothFactor;
+      smoothPosition.current.z += (Math.sin(t * (isMobile ? 0.11 : 0.07)) * 0.0035 - smoothPosition.current.z) * smoothFactor;
     } else {
       smoothPosition.current.x += (-0.11 + Math.sin(t * 0.09) * 0.005 - smoothPosition.current.x) * smoothFactor;
       smoothPosition.current.y += (-0.36 + Math.sin(t * 0.14) * 0.0055 + easedP * 0.08 - smoothPosition.current.y) * smoothFactor;
@@ -92,12 +97,13 @@ const VRHeadset = memo(function VRHeadset({ progressRef, initialScale, active, i
 
     ref.current.position.set(smoothPosition.current.x, smoothPosition.current.y, smoothPosition.current.z);
 
-    // Scale - Slower and smoother progression
+    // Scale - Faster scaling for mobile
     const targetScale = isMobile
-      ? initialScale + easedP * (168 - initialScale)  // Reduced max scale for mobile (was 228)
+      ? initialScale + easedP * (168 - initialScale)
       : initialScale + easedP * (385 - initialScale);
 
-    smoothScale.current += (targetScale - smoothScale.current) * smoothFactor * 0.72; // Slower scaling
+    const scaleSpeed = isMobile ? 0.92 : 0.72;
+    smoothScale.current += (targetScale - smoothScale.current) * smoothFactor * scaleSpeed;
     ref.current.scale.set(smoothScale.current, smoothScale.current, smoothScale.current);
   });
 
@@ -320,19 +326,23 @@ export default function Home_Hero() {
     };
   }, [showModel, progress, showVideo]);
 
-  // SLOWER SCROLL ANIMATION - Reduced sensitivity significantly
+  // FASTER SCROLL ANIMATION FOR MOBILE - Increased sensitivity significantly
   const updateProgress = useRef((delta) => {
     if (showVideo) return;
 
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
     animationFrameRef.current = requestAnimationFrame(() => {
-      // Much lower sensitivity for slower scroll animation
-      const sensitivity = isMobile ? (windowWidth < 380 ? 0.28 : 0.32) : 0.22;
+      // Much higher sensitivity for faster mobile scroll animation
+      const sensitivity = isMobile 
+        ? (windowWidth < 380 ? 0.65 : 0.72)  // Much faster for mobile
+        : 0.22; // PC speed unchanged
       let next = Math.min(Math.max(progressRef.current + delta * sensitivity, 0), 1);
 
-      // Additional smoothing for slower feel
-      if (next > progressRef.current) {
+      // Reduced smoothing for faster response on mobile
+      if (isMobile) {
+        next = progressRef.current + (next - progressRef.current) * 0.85;
+      } else if (next > progressRef.current) {
         next = progressRef.current + (next - progressRef.current) * 0.68;
       }
 
@@ -349,7 +359,7 @@ export default function Home_Hero() {
     });
   }).current;
 
-  // Wheel & Touch handlers with slower progression
+  // Wheel & Touch handlers with faster progression for mobile
   useEffect(() => {
     let ticking = false;
     let touchAnimationFrame = null;
@@ -363,8 +373,8 @@ export default function Home_Hero() {
 
       if (scrollLocked || progressRef.current < 1) e.preventDefault();
 
-      // Much smaller delta multiplier for slower animation
-      const delta = e.deltaY * (isMobile ? 0.00038 : 0.00032);
+      // Much larger delta multiplier for faster mobile animation
+      const delta = e.deltaY * (isMobile ? 0.0012 : 0.00032); // Mobile: ~3.75x faster
 
       if (ticking) return;
       ticking = true;
@@ -390,8 +400,8 @@ export default function Home_Hero() {
 
       const currentY = e.touches[0].clientY;
       const deltaY = touchStartRef.current.y - currentY;
-      // Reduced multiplier for slower touch response
-      const multiplier = windowWidth < 380 ? 0.0011 : 0.0013;
+      // Much higher multiplier for faster touch response on mobile
+      const multiplier = windowWidth < 380 ? 0.0032 : 0.0038; // ~3x faster
 
       if (touchAnimationFrame) cancelAnimationFrame(touchAnimationFrame);
 
@@ -414,12 +424,12 @@ export default function Home_Hero() {
     };
   }, [scrollLocked, isMobile, windowWidth, updateProgress, showVideo]);
 
-  // Reverse animation (slower and smoother)
+  // Reverse animation (faster for mobile, same for PC)
   useEffect(() => {
     let isAnimating = false;
     let lastTriggerTime = 0;
-    const COOLDOWN_MS = 450;
-    const SCROLL_UP_THRESHOLD = isMobile ? 15 : 30;
+    const COOLDOWN_MS = isMobile ? 250 : 450; // Faster cooldown for mobile
+    const SCROLL_UP_THRESHOLD = isMobile ? 8 : 30; // Lower threshold for mobile
 
     const startReverseAnimation = () => {
       if (isAnimating || !showVideo) return;
@@ -436,8 +446,8 @@ export default function Home_Hero() {
 
       const startProgress = 0.416;
       const startTime = performance.now();
-      // Longer duration for slower reverse animation
-      const duration = isMobile ? 1600 : 1900;
+      // Much shorter duration for faster mobile reverse animation
+      const duration = isMobile ? 700 : 1900; // Mobile: ~2.7x faster
 
       const animateReverse = (now) => {
         const elapsed = now - startTime;
@@ -466,7 +476,7 @@ export default function Home_Hero() {
     const checkScrollUp = () => {
       const currentScrollY = window.scrollY;
       const sectionTop = sectionRef.current?.offsetTop || 0;
-      const isAtTop = currentScrollY <= sectionTop + (isMobile ? 25 : 45);
+      const isAtTop = currentScrollY <= sectionTop + (isMobile ? 15 : 45);
 
       if (showVideo && isAtTop && currentScrollY < lastScrollYRef.current &&
           lastScrollYRef.current - currentScrollY > SCROLL_UP_THRESHOLD) {
@@ -485,7 +495,7 @@ export default function Home_Hero() {
     const handleWheelReverse = (e) => {
       if (showVideo && e.deltaY < 0) {
         const sectionTop = sectionRef.current?.offsetTop || 0;
-        const isAtTop = window.scrollY <= sectionTop + (isMobile ? 25 : 45);
+        const isAtTop = window.scrollY <= sectionTop + (isMobile ? 15 : 45);
         if (isAtTop) {
           e.preventDefault();
           startReverseAnimation();
@@ -499,7 +509,7 @@ export default function Home_Hero() {
       if (!touch) return;
       const deltaY = touchStartRef.current.y - touch.clientY;
       const sectionTop = sectionRef.current?.offsetTop || 0;
-      const isAtTop = window.scrollY <= sectionTop + (isMobile ? 25 : 45);
+      const isAtTop = window.scrollY <= sectionTop + (isMobile ? 15 : 45);
 
       if (isAtTop && deltaY < -SCROLL_UP_THRESHOLD) {
         startReverseAnimation();
@@ -519,7 +529,7 @@ export default function Home_Hero() {
     };
   }, [showVideo, isMobile]);
 
-  // Start small progress on initial scroll down - with slower trigger
+  // Start small progress on initial scroll down - faster for mobile
   useEffect(() => {
     let initTimeout = null;
     const handleScrollDown = (e) => {
@@ -529,7 +539,6 @@ export default function Home_Hero() {
       if (e.type === 'wheel') {
         isScrollingDown = e.deltaY > 0;
       } else if (e.type === 'touchmove') {
-        // For touch, check if moving down
         if (e.touches && e.touches[0]) {
           const currentY = e.touches[0].clientY;
           const deltaY = touchStartRef.current.y - currentY;
@@ -538,18 +547,18 @@ export default function Home_Hero() {
       }
 
       if (isScrollingDown &&
-          window.scrollY <= sectionTop + (isMobile ? 15 : 30) &&
+          window.scrollY <= sectionTop + (isMobile ? 10 : 30) &&
           progress === 0 && showModel && !showVideo) {
 
-        // Clear any pending timeout
         if (initTimeout) clearTimeout(initTimeout);
         
-        // Small delay to avoid accidental triggers
+        // Much shorter delay for faster initial trigger on mobile
+        const delay = isMobile ? 20 : 50;
         initTimeout = setTimeout(() => {
-          progressRef.current = 0.002;
-          setProgress(0.002);
+          progressRef.current = 0.005;
+          setProgress(0.005);
           setScrollLocked(true);
-        }, 50);
+        }, delay);
       }
     };
 
@@ -564,7 +573,7 @@ export default function Home_Hero() {
   }, [progress, showModel, showVideo, isMobile]);
 
   const modelTop = isMobile
-    ? 0.85 * (1 - Math.min(progress * 7.5, 1))  // Reduced upward movement
+    ? 0.85 * (1 - Math.min(progress * 7.5, 1))
     : 9.5 * (1 - Math.min(progress * 6.8, 1));
 
   const cameraPosition = isMobile
@@ -692,8 +701,8 @@ export default function Home_Hero() {
       : "none",
     fontSize: isMobile
       ? windowWidth < 380
-        ? 'clamp(30px, 5vw, 1.6rem)'   // 👈 small mobile bigger
-        : 'clamp(1.4rem, 5.5vw, 1.9rem)' // 👈 normal mobile bigger
+        ? 'clamp(30px, 5vw, 1.6rem)'
+        : 'clamp(1.4rem, 5.5vw, 1.9rem)'
       : 'clamp(2.25rem, 3.1vw, 2.85rem)',
     lineHeight: isMobile ? '1.35' : '1.32',
     maxWidth: isMobile
