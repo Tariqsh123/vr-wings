@@ -13,7 +13,7 @@ const services = [
 
 export default function Home_Services() {
   return (
-    <section className="relative w-full py-20 bg-white">
+    <section className="relative w-full py-20 bg-white m-0">
       <div className="max-w-[1200px] mx-auto px-6">
         
         {/* Heading */}
