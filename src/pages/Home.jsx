@@ -1,6 +1,7 @@
 import Home_Hero from "../components/Home_Hero";
 import Home_Services from "../components/Home_Services";
 import HomeModules from "../components/Home_Modules";
+import BadgeGrid from "../components/BadgeGrid";
 import Footer from "../components/footer";
 import WhatsappFloat from "../components/WhatsappFloat";
 import WhatsappPopup from "../components/WhatsappPop";
@@ -13,6 +14,7 @@ export default function Home() {
 <Home_Hero/>
 <Home_Services/>
 <HomeModules/>
+<BadgeGrid/>
 <Footer/>
 <WhatsappFloat/>  
 <WhatsappPopup/>

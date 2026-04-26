@@ -46,7 +46,7 @@ function WhatsappPopup() {
 
           <div id="whatsapp-icon-container">
             <img
-              src="https://img.icons8.com/?size=100&id=16733&format=png&color=6f33fa"
+              src="https://img.icons8.com/?size=100&id=16733&format=png&color=1c732c"
               loading="lazy"
               alt="whatsapp-icon"
             />

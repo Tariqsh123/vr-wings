@@ -327,7 +327,7 @@
 }
 
 #whatsapp-popup-main-container span:hover {
-  color: #6f33fa;
+  color: #1c732c;
 }
 
 #whatsapp-icon-container {
@@ -343,7 +343,7 @@
 }
 
 #whatsapp-icon-container a {
-  color: #6f33fa;
+  color: #1c732c;
   font-weight: 600;
   text-decoration: none;
 }
@@ -381,4 +381,120 @@
   #whatsapp-icon-container {
     height: 30px;
   }
+}
+
+
+
+.badge-heading {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  align-items: center;
+  background: #eee;
+  margin: 0;
+}
+
+.badge-heading h2 {
+  font-size: 48px;
+  color: black;
+  font-weight: 900;
+  padding: 0 20px;
+  text-align: center;
+  position: relative;
+}
+
+.badge-heading h2::after {
+  content: "";
+  display: block;
+  width: 80px;       /* line length */
+  height: 3px;       /* line thickness */
+  background: #8b5cf6;
+  margin: 10px auto 0; /* center + spacing */
+  border-radius: 5px;
+}
+.badge-container {
+  width: 100%;
+  padding: 25px 0;
+  background: #eee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  gap: 20px;
+}
+
+.badge-inner {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+}
+
+.badge-box {
+  height: 160px;
+  width: 250px;
+  padding: 10px;
+  display: flex;
+  gap: 5px;
+  border-radius: 20px;
+  text-decoration: none;
+  flex-direction: column;
+  align-items: center;
+  background: white;
+  transition: 0.3s;
+}
+
+.badge-box img {
+  height: 70px;
+  object-fit: contain;
+}
+
+.badge-box p {
+  color: gray;
+  font-size: medium;
+  margin: 0;
+}
+
+.badge-box span {
+  font-size: x-small;
+  text-align: center;
+  color: black;
+}
+
+.badge-box span b {
+  color: #8b5cf6;
+}
+
+.badge-box:hover p {
+  color: #8b5cf6;
+}
+
+.badge-container button {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 20px;
+  font-weight: 700;
+  border: none;
+  color: white;
+  background: #636363;
+  transition: 0.3s;
+}
+
+.badge-container button:hover {
+  background: #8b5cf6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .badge-box {
+    height: fit-content;
+    width: 100%;
+  }
+.badge-heading h2 {
+font-size: 36px;
+}
 }
