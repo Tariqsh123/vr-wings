@@ -21,7 +21,8 @@ import {
   FaServer,
 } from "react-icons/fa";
 import Footer from "../components/footer";
-
+import WhatsappFloat from "../components/WhatsappFloat";
+import WhatsappPopup from "../components/WhatsappPop";
 
 export default function ModulePage() {
   const { slug } = useParams();
@@ -348,6 +349,8 @@ export default function ModulePage() {
         </div>
       </div>
       <Footer/>
+      <WhatsappFloat/>
+      <WhatsappPopup/>
     </div>
   );
 }
