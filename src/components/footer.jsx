@@ -1,4 +1,6 @@
 import React from "react";
+import { Link } from "react-router-dom";
+
 import {
   FaLinkedinIn,
   FaInstagram,
@@ -24,11 +26,7 @@ const Footer = () => {
 
         {/* Left Section */}
         <div className="footer-left">
-          <img
-            src={logo}
-            alt="Company Logo"
-            style={{ width: "140px" }}
-          />
+          <img src={logo} alt="Company Logo" style={{ width: "140px" }} />
 
           <h2 style={{ fontSize: "18px", margin: "10px 0" }}>
             Get updates.
@@ -75,11 +73,11 @@ const Footer = () => {
           <div className="footer-column">
             <h4>Company</h4>
             <ul>
-              <li>Pricing</li>
-              <li>Tools & Technologies</li>
-              <li>Blogs</li>
-              <li>About</li>
-              <li>Contact Us</li>
+              <li><Link to="/pricing">Pricing</Link></li>
+              <li><Link to="/tools-technologies">Tools & Technologies</Link></li>
+              <li><Link to="/blog">Blogs</Link></li>
+              <li><Link to="/about">About</Link></li>
+              <li><Link to="/contact">Contact Us</Link></li>
             </ul>
           </div>
 
@@ -88,38 +86,17 @@ const Footer = () => {
             <h4>Contact Us</h4>
             <ul style={{ padding: 0, listStyle: "none" }}>
 
-              <li
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "10px"
-                }}
-              >
+              <li style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
                 <FaPhoneAlt style={{ fontSize: "16px" }} />
                 +44 7463 151997
               </li>
 
-              <li
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "10px"
-                }}
-              >
+              <li style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
                 <FaEnvelope style={{ fontSize: "16px" }} />
                 info@vrwings.com
               </li>
 
-              <li
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "10px"
-                }}
-              >
+              <li style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
                 <FaMapMarkerAlt style={{ fontSize: "16px" }} />
                 20 Wenlock Road, London, N1 7GU
               </li>

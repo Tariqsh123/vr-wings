@@ -1,5 +1,7 @@
 import React from "react";
 import "../App.css";
+import { Link } from "react-router-dom";
+
 
 const badges = [
   // ❌ COMMENTED (Glassdoor)
@@ -21,7 +23,7 @@ const badges = [
   // ✅ Clutch
   {
     img: "https://thebravenext.com/images/Clutch.png",
-    link: "https://clutch.co/profile/brave-next",
+    link: "#",
     title: "Clutch",
     active: true,
   },
@@ -29,7 +31,7 @@ const badges = [
   // ✅ G2
   {
     img: "https://thebravenext.com/images/G2.png",
-    link: "https://www.g2.com/products/the-brave-next/reviews",
+    link: "#",
     title: "G2 Crowd",
     active: true,
   },
@@ -37,7 +39,7 @@ const badges = [
   // ✅ Sitejabber
   {
     img: "https://thebravenext.com/images/SiteJabbar.png",
-    link: "https://www.sitejabber.com/reviews/thebravenext.com",
+    link: "#",
     title: "Sitejabbar",
     active: true,
   },
@@ -61,7 +63,7 @@ const badges = [
   // ✅ Trustpilot
   {
     img: "https://thebravenext.com/images/TrustPilot.png",
-    link: "https://www.trustpilot.com/review/thebravenext.com",
+    link: "#",
     title: "Trust Pilot",
     active: true,
   },
@@ -77,7 +79,7 @@ const badges = [
   // ✅ Facebook
   {
     img: "https://thebravenext.com/images/Facebook-Review.png",
-    link: "https://www.facebook.com/people/The-Brave-Next/61566589869751/",
+    link: "#",
     title: "Facebook",
     active: true,
   },
@@ -85,7 +87,7 @@ const badges = [
   // ✅ Google
   {
     img: "https://thebravenext.com/images/google-reviews.png",
-    link: "https://www.google.com/maps/place/The+Brave+Next",
+    link: "#",
     title: "Google",
     active: true,
   },
@@ -93,7 +95,7 @@ const badges = [
   // ✅ Sortlist
   {
     img: "https://thebravenext.com/images/Sort List.png",
-    link: "https://www.sortlist.co.uk/agency/the-brave-next",
+    link: "#",
     title: "Sortlist",
     active: true,
   },
@@ -109,7 +111,7 @@ const badges = [
   // ✅ LinkedIn
   {
     img: "https://thebravenext.com/images/Linkeding-Badge.png",
-    link: "https://www.linkedin.com/company/thebravenext/",
+    link: "https://www.linkedin.com/company/vrwing/",
     title: "LinkedIn",
     active: true,
   },
@@ -156,9 +158,10 @@ function BadgeGrid() {
 
         </div>
 
-        <a href="#">
-          <button>Read More Reviews</button>
-        </a>
+       
+<Link to="/testimonials">
+  <button>Read More Reviews</button>
+</Link>
       </div>
     </>
   );

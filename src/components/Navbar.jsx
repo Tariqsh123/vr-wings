@@ -79,8 +79,9 @@ export default function Navbar() {
 
             <NavLink to="/pricing" className={navLinkClass}>Pricing</NavLink>
             <NavLink to="/tools-technologies" className={navLinkClass}>Tools & Technologies</NavLink>
-            <NavLink to="/blogs" className={navLinkClass}>Blogs</NavLink>
+            <NavLink to="/blog" className={navLinkClass}>Blogs</NavLink>
             <NavLink to="/about" className={navLinkClass}>About</NavLink>
+            <NavLink to="/scheduledemo" className={navLinkClass}>Schedule Demo</NavLink>
 
             <NavLink
               to="/contact"
@@ -144,8 +145,9 @@ export default function Navbar() {
           {[
             ["/pricing", "Pricing"],
             ["/tools-technologies", "Tools & Technologies"],
-            ["/blogs", "Blogs"],
+            ["/blog", "Blogs"],
             ["/about", "About"],
+            ["/scheduledemo", "Schedule Demo"],
           ].map(([path, label]) => (
             <NavLink
               key={path}

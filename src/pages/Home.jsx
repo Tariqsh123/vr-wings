@@ -5,6 +5,7 @@ import BadgeGrid from "../components/BadgeGrid";
 import Footer from "../components/footer";
 import WhatsappFloat from "../components/WhatsappFloat";
 import WhatsappPopup from "../components/WhatsappPop";
+import BackToTop from "../components/BackToTop";
 
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
 <Footer/>
 <WhatsappFloat/>  
 <WhatsappPopup/>
+<BackToTop/>
     </div>
   );
 }
