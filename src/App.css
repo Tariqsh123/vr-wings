@@ -305,6 +305,7 @@
   width: 250px;
   position: fixed;
   padding: 10px;
+  margin: 0 !important;
   bottom: 10px;
   left: 10px;
   background-color: #fff;

@@ -33,6 +33,7 @@ export default function BackToTop() {
           bottom:100px;
           right:35px;
           width:35px;
+          margin:0 !important;
           height:35px;
           border-radius:50%;
           border:none;
